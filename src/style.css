@@ -1,0 +1,430 @@
+/* ============================================================
+   crypto-lab · shared base styling
+   Dark default · light via [data-theme="light"]
+   Component classes consumed by ui.ts live below; demo-specific
+   components (script tokens, stack visualizer) live in extra.css
+   and reuse the same variables.
+   ============================================================ */
+
+:root,
+[data-theme='dark'] {
+  --bg: #0d1024;
+  --bg-soft: #161a36;
+  --panel: #1b1f3a;
+  --panel-strong: #232850;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.16);
+
+  --ink-strong: #f5f5ff;
+  --ink: #d8dbf0;
+  --ink-soft: #9ea3c6;
+  --ink-faint: #6f7499;
+
+  /* Bitcoin-orange accent groups this lab with the Bitcoin Wallet demo. */
+  --accent: #f7931a;
+  --accent-2: #7ad1ff;
+  --accent-3: #ffd479;
+  --accent-4: #6ff0b6;
+
+  --warning-bg: rgba(255, 174, 95, 0.12);
+  --warning-ink: #ffb56b;
+  --metric-bg: rgba(122, 209, 255, 0.1);
+
+  --pass-bg: rgba(111, 240, 182, 0.13);
+  --pass-ink: #6ff0b6;
+  --fail-bg: rgba(255, 110, 134, 0.15);
+  --fail-ink: #ff8d9f;
+  --pending-bg: rgba(255, 212, 121, 0.13);
+  --pending-ink: #ffd479;
+
+  --mono: ui-monospace, SFMono-Regular, 'JetBrains Mono', Consolas, monospace;
+  --sans: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  --shadow-1: 0 12px 30px rgba(0, 0, 0, 0.45);
+  --shadow-2: 0 4px 14px rgba(0, 0, 0, 0.3);
+
+  --radius-sm: 6px;
+  --radius: 12px;
+  --radius-lg: 18px;
+}
+
+[data-theme='light'] {
+  --bg: #f6f6fb;
+  --bg-soft: #ecedf6;
+  --panel: #ffffff;
+  --panel-strong: #f1f1fa;
+  --line: rgba(20, 23, 60, 0.08);
+  --line-strong: rgba(20, 23, 60, 0.16);
+
+  --ink-strong: #14143c;
+  --ink: #2a2c5b;
+  --ink-soft: #4a4f78;
+  --ink-faint: #7c80a6;
+
+  /* Accents darkened in light mode to meet WCAG AA (4.5:1) with white text. */
+  --accent: #9a5400;
+  --accent-2: #0a5c87;
+  --accent-3: #8a4f08;
+  --accent-4: #146b40;
+
+  --warning-bg: rgba(138, 79, 8, 0.14);
+  --warning-ink: #6e3e06;
+  --metric-bg: rgba(10, 92, 135, 0.12);
+
+  --pass-bg: rgba(20, 107, 64, 0.15);
+  --pass-ink: #0b5b34;
+  --fail-bg: rgba(140, 26, 53, 0.13);
+  --fail-ink: #8c1a35;
+  --pending-bg: rgba(138, 79, 8, 0.15);
+  --pending-ink: #6e3e06;
+
+  --shadow-1: 0 10px 24px rgba(20, 23, 60, 0.12);
+  --shadow-2: 0 4px 12px rgba(20, 23, 60, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#app {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 32px 24px 64px;
+}
+
+/* ---------- Accessibility utilities ---------- */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 12px;
+  z-index: 100;
+  padding: 10px 16px;
+  background: var(--accent);
+  color: var(--bg);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  font-weight: 600;
+  transition: top 0.15s ease;
+}
+.skip-link:focus {
+  top: 12px;
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
+}
+
+/* ---------- Hero ---------- */
+.hero-panel {
+  position: relative;
+  padding: 32px 32px 28px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, var(--panel) 0%, var(--panel-strong) 100%);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-1);
+  margin-bottom: 32px;
+}
+.hero-panel .hero-eyebrow {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+  margin: 0 0 10px;
+}
+.hero-panel h1 {
+  font-size: clamp(28px, 4vw, 40px);
+  margin: 0 0 14px;
+  color: var(--ink-strong);
+  letter-spacing: -0.01em;
+}
+.hero-panel p.hero-lede {
+  font-size: 17px;
+  color: var(--ink);
+  max-width: 70ch;
+  margin: 0 0 18px;
+}
+.hero-panel details {
+  margin-top: 18px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+.hero-panel summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 14px;
+}
+.hero-panel details[open] summary {
+  margin-bottom: 8px;
+}
+.hero-metric {
+  display: inline-flex;
+  margin-top: 10px;
+  padding: 8px 14px;
+  background: var(--metric-bg);
+  border: 1px solid var(--line);
+  color: var(--accent-2);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  border-radius: 999px;
+}
+
+/* ---------- Theme toggle (circular, top-right) ---------- */
+.theme-toggle {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: var(--panel-strong);
+  color: var(--ink-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.2s ease;
+}
+.theme-toggle:hover {
+  transform: rotate(15deg);
+  background: var(--panel);
+}
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle,
+  .theme-toggle:hover {
+    transition: none;
+    transform: none;
+  }
+  * {
+    animation-duration: 0.001s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001s !important;
+  }
+}
+
+/* ---------- Lab section frame ---------- */
+.lab-section {
+  margin-bottom: 32px;
+  padding: 24px 24px 22px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-2);
+}
+.section-heading-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+.section-heading-row h2 {
+  font-size: 22px;
+  margin: 0;
+  color: var(--ink-strong);
+  letter-spacing: -0.01em;
+}
+.section-kicker {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.lab-section > p {
+  margin: 6px 0 14px;
+  color: var(--ink);
+  max-width: 75ch;
+}
+
+/* ---------- Panel card (used inside sections) ---------- */
+.panel-card {
+  padding: 16px 18px;
+  background: var(--panel-strong);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+/* ---------- Generic button ---------- */
+button {
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 700;
+  min-height: 44px; /* WCAG 2.5.5 target size */
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--accent);
+  /* Dark accent text reads against the bright orange accent; light theme uses
+     a dark accent, so white text there. */
+  color: var(--bg);
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.05s ease;
+}
+[data-theme='light'] button {
+  color: #ffffff;
+}
+button:hover {
+  filter: brightness(1.08);
+}
+button:active {
+  transform: translateY(1px);
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+button:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
+}
+button.secondary {
+  background: var(--panel-strong);
+  color: var(--ink-strong);
+  border-color: var(--line-strong);
+}
+[data-theme='light'] button.secondary {
+  color: var(--ink-strong);
+}
+
+/* ---------- Grids ---------- */
+.playground-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+.reuse-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+/* ---------- Tables (wrap in .table-wrap on mobile for horizontal scroll) ---------- */
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius-sm);
+}
+.table-wrap:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
+}
+.math-table {
+  width: 100%;
+  min-width: 320px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.math-table th,
+.math-table td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.math-table th {
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* ---------- Scenario status badges ---------- */
+.scenario-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: 1px solid var(--line);
+}
+.scenario-status--valid {
+  background: var(--pass-bg);
+  color: var(--pass-ink);
+}
+.scenario-status--invalid {
+  background: var(--fail-bg);
+  color: var(--fail-ink);
+}
+.scenario-status--pending {
+  background: var(--pending-bg);
+  color: var(--pending-ink);
+}
+
+/* ---------- Code / mono ---------- */
+code,
+.mono {
+  font-family: var(--mono);
+  font-size: 13px;
+}
+pre {
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  overflow-x: auto;
+  color: var(--ink-strong);
+}
+
+/* ---------- Footer (scripture — added by the Part D standardization pass) ---------- */
+.scripture-footer {
+  margin-top: 48px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+  text-align: center;
+  color: var(--ink-soft);
+  font-style: italic;
+  font-size: 14px;
+}
+.scripture-footer cite {
+  font-style: normal;
+  color: var(--ink);
+}
+
+@media (max-width: 600px) {
+  #app {
+    padding: 22px 16px 48px;
+  }
+  .hero-panel {
+    padding: 26px 22px 22px;
+  }
+  .theme-toggle {
+    top: 14px;
+    right: 14px;
+  }
+}

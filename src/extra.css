@@ -1,0 +1,413 @@
+/* ============================================================
+   crypto-lab-bitcoin-script · demo-specific components
+   Reuses the variables defined in style.css. Covers the key
+   panel, scenario picker, transaction/script panels, the token
+   strip, the stack visualizer, and the verdict banner.
+   ============================================================ */
+
+/* ---------- generic small cards ---------- */
+.mini-card-title {
+  display: block;
+  color: var(--ink-strong);
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+.mini-card-body {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 13.5px;
+}
+.lab-note {
+  margin: 14px 0 0;
+  padding: 10px 14px;
+  background: var(--warning-bg);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--warning-ink);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font-size: 13px;
+}
+
+/* ---------- pattern cards ---------- */
+.pattern-card .pattern-script {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 8px 0;
+  flex-wrap: wrap;
+}
+.pattern-label {
+  flex: 0 0 auto;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--metric-bg);
+  color: var(--accent-2);
+}
+.pattern-script code {
+  font-size: 12px;
+  color: var(--ink-strong);
+  word-break: break-word;
+}
+
+/* ---------- key panel ---------- */
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.kv-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 4px 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.kv-key {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+.kv-value {
+  color: var(--ink-strong);
+  word-break: break-all;
+}
+.kv-hint {
+  grid-column: 2;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+/* ---------- scenario picker ---------- */
+.scenario-pick {
+  margin: 18px 0 6px;
+}
+.pick-label {
+  display: block;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-soft);
+  margin-bottom: 8px;
+}
+.scenario-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.scenario-btn {
+  background: var(--panel-strong);
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  border-left-width: 4px;
+}
+.scenario-btn.good {
+  border-left-color: var(--pass-ink);
+}
+.scenario-btn.bad {
+  border-left-color: var(--fail-ink);
+}
+.scenario-btn.is-active {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+[data-theme='light'] .scenario-btn.is-active {
+  color: #fff;
+}
+.scenario-blurb {
+  margin: 14px 0 4px;
+}
+.scenario-blurb .twist {
+  margin: 0 0 8px;
+  color: var(--ink);
+  font-size: 14.5px;
+}
+.scenario-blurb .expectation {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.signed-over {
+  font-size: 12.5px;
+  color: var(--ink-faint);
+}
+
+/* ---------- tx + script panels ---------- */
+.tx-panel strong,
+.script-panel .script-tag {
+  display: inline-block;
+}
+.tx-panel td.tampered {
+  color: var(--fail-ink);
+  font-weight: 700;
+}
+.script-line {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  margin: 6px 0;
+  flex-wrap: wrap;
+}
+.script-tag {
+  flex: 0 0 auto;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+.script-tag.unlock {
+  background: var(--metric-bg);
+  color: var(--accent-2);
+}
+.script-tag.lock {
+  background: var(--pending-bg);
+  color: var(--pending-ink);
+}
+.script-line code {
+  color: var(--ink-strong);
+  font-size: 12.5px;
+  word-break: break-word;
+}
+.script-bytes {
+  margin-top: 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+  word-break: break-all;
+}
+
+/* ---------- token strip ---------- */
+.token-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: 12px;
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  margin-bottom: 16px;
+}
+.token {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  padding: 5px 9px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  color: var(--ink-soft);
+  transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+.token.executed {
+  color: var(--ink-strong);
+  border-color: var(--accent);
+}
+.token.active {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+[data-theme='light'] .token.active {
+  color: #fff;
+}
+.token-sep {
+  color: var(--ink-faint);
+  font-weight: 700;
+  padding: 0 2px;
+}
+
+/* ---------- visualizer layout ---------- */
+.viz-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(260px, 1.4fr);
+  gap: 16px;
+}
+.viz-left,
+.viz-right {
+  min-width: 0;
+}
+
+/* ---------- stack ---------- */
+.stack-view {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  min-height: 220px;
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  justify-content: flex-end;
+}
+.stack-caption {
+  order: -1;
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  margin-bottom: 4px;
+}
+.stack-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-2);
+  animation: stack-pop 0.18s ease;
+}
+@keyframes stack-pop {
+  from {
+    transform: translateY(-6px);
+    opacity: 0.4;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.stack-item.top {
+  border-color: var(--accent);
+}
+.stack-item.is-true {
+  border-color: var(--pass-ink);
+  background: var(--pass-bg);
+}
+.stack-item.is-false {
+  border-color: var(--fail-ink);
+  background: var(--fail-bg);
+}
+.stack-item-label {
+  font-size: 11.5px;
+  color: var(--ink-soft);
+}
+.stack-item-hex {
+  font-size: 12.5px;
+  color: var(--ink-strong);
+  word-break: break-all;
+}
+.stack-empty {
+  text-align: center;
+  color: var(--ink-faint);
+  font-size: 28px;
+}
+
+/* ---------- step description ---------- */
+.step-desc {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  min-height: 90px;
+  background: var(--panel-strong);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+}
+.step-desc.step-verify-pass {
+  border-left-color: var(--pass-ink);
+}
+.step-desc.step-verify-fail,
+.step-desc.step-abort {
+  border-left-color: var(--fail-ink);
+}
+.step-desc.step-push,
+.step-desc.step-op {
+  border-left-color: var(--accent);
+}
+.step-token {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+}
+.step-action {
+  color: var(--ink-strong);
+  font-size: 14px;
+}
+.step-note {
+  color: var(--ink-soft);
+  font-size: 12.5px;
+}
+
+/* ---------- verdict ---------- */
+.verdict:empty {
+  display: none;
+}
+.verdict {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+}
+.verdict-accept {
+  background: var(--pass-bg);
+  border-color: var(--pass-ink);
+}
+.verdict-reject {
+  background: var(--fail-bg);
+  border-color: var(--fail-ink);
+}
+.verdict-head {
+  font-weight: 800;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+.verdict-accept .verdict-head {
+  color: var(--pass-ink);
+}
+.verdict-reject .verdict-head {
+  color: var(--fail-ink);
+}
+.verdict p {
+  margin: 6px 0 0;
+  font-size: 13.5px;
+  color: var(--ink);
+}
+.verdict-security {
+  font-weight: 600;
+  color: var(--ink-strong);
+}
+.verdict-reason {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+/* ---------- controls ---------- */
+.viz-controls {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+/* ---------- mobile ---------- */
+@media (max-width: 640px) {
+  .viz-grid {
+    grid-template-columns: 1fr;
+  }
+  .kv-row {
+    grid-template-columns: 1fr;
+  }
+  .kv-hint {
+    grid-column: 1;
+  }
+}
