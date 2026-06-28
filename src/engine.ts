@@ -1,13 +1,14 @@
 // engine.ts — the real cryptography behind the demo, built on the audited
 // @noble libraries. Covers: secp256k1 keys, HASH160 (RIPEMD160∘SHA256), DER
-// signature encoding/decoding, a real legacy SIGHASH_ALL preimage over a
-// concrete one-input/one-output transaction, ECDSA signing, and the OP_CHECKSIG
+// signature encoding/decoding/inspection, a real legacy SIGHASH_ALL preimage
+// (exposed as labelled segments) over a concrete one-input/one-output
+// transaction, ECDSA signing, Base58Check P2PKH addresses, and the OP_CHECKSIG
 // verification predicate.
 //
 // Everything here is real Bitcoin math. The signature scheme is ECDSA over
-// secp256k1 with low-S enforced (BIP-146) and strict-ish DER (BIP-66). The
-// sighash is the genuine legacy algorithm. This is for EDUCATION — keys are
-// generated per session in memory and never persisted; do not guard real funds.
+// secp256k1 with low-S enforced (BIP-146) and DER encoding (BIP-66). The sighash
+// is the genuine legacy algorithm. This is for EDUCATION — keys are generated
+// per session in memory and never persisted; do not guard real funds.
 
 import * as secp from '@noble/secp256k1';
 import { sha256 } from '@noble/hashes/sha2';
@@ -19,6 +20,9 @@ import { hmac } from '@noble/hashes/hmac';
 secp.etc.hmacSha256Sync = (key: Uint8Array, ...msgs: Uint8Array[]): Uint8Array =>
   hmac(sha256, key, secp.etc.concatBytes(...msgs));
 
+const N = secp.CURVE.n;
+const HALF_N = N / 2n;
+
 // ---------------------------------------------------------------------------
 // byte helpers
 // ---------------------------------------------------------------------------
@@ -29,6 +33,7 @@ export function bytesToHex(b: Uint8Array): string {
 }
 export function hexToBytes(h: string): Uint8Array {
   const clean = h.startsWith('0x') ? h.slice(2) : h;
+  if (clean.length % 2 !== 0 || /[^0-9a-fA-F]/.test(clean)) throw new Error('invalid hex');
   const out = new Uint8Array(clean.length / 2);
   for (let i = 0; i < out.length; i++) out[i] = parseInt(clean.slice(i * 2, i * 2 + 2), 16);
   return out;
@@ -49,11 +54,17 @@ export function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
   for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
   return diff === 0;
 }
+export function sha256d(b: Uint8Array): Uint8Array {
+  return sha256(sha256(b));
+}
 export function hash160(b: Uint8Array): Uint8Array {
   return ripemd160(sha256(b));
 }
-function dsha256(b: Uint8Array): Uint8Array {
-  return sha256(sha256(b));
+
+/** The two intermediate steps of HASH160, for the pipeline visualizer. */
+export function hash160Pipeline(b: Uint8Array): { sha256: Uint8Array; ripemd160: Uint8Array } {
+  const s = sha256(b);
+  return { sha256: s, ripemd160: ripemd160(s) };
 }
 
 // little-endian integer serializers used by transaction encoding
@@ -87,6 +98,38 @@ function bigintTo32be(n: bigint): Uint8Array {
 }
 
 // ---------------------------------------------------------------------------
+// Base58Check (for the P2PKH address bridge)
+// ---------------------------------------------------------------------------
+const B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+function base58encode(bytes: Uint8Array): string {
+  let zeros = 0;
+  while (zeros < bytes.length && bytes[zeros] === 0) zeros++;
+  const digits: number[] = [];
+  for (let i = zeros; i < bytes.length; i++) {
+    let carry = bytes[i];
+    for (let j = 0; j < digits.length; j++) {
+      carry += digits[j] << 8;
+      digits[j] = carry % 58;
+      carry = (carry / 58) | 0;
+    }
+    while (carry > 0) {
+      digits.push(carry % 58);
+      carry = (carry / 58) | 0;
+    }
+  }
+  let str = '1'.repeat(zeros);
+  for (let i = digits.length - 1; i >= 0; i--) str += B58[digits[i]];
+  return str;
+}
+export function base58check(payload: Uint8Array): string {
+  return base58encode(concat(payload, sha256d(payload).slice(0, 4)));
+}
+/** mainnet P2PKH address: Base58Check(0x00 || pubKeyHash). */
+export function p2pkhAddress(pubKeyHash: Uint8Array): string {
+  return base58check(concat(Uint8Array.of(0x00), pubKeyHash));
+}
+
+// ---------------------------------------------------------------------------
 // keys
 // ---------------------------------------------------------------------------
 export interface KeyPair {
@@ -101,13 +144,21 @@ export function makeKeyPair(priv?: Uint8Array): KeyPair {
   return { priv: sk, pub, pubKeyHash: hash160(pub) };
 }
 
+/** Validate/normalize a compressed public key (33 bytes, 0x02/0x03 prefix, on
+ *  curve). Throws on anything malformed so callers can fail closed. */
+export function parseCompressedPubKey(bytes: Uint8Array): Uint8Array {
+  if (bytes.length !== 33) throw new Error('compressed public key must be 33 bytes');
+  if (bytes[0] !== 0x02 && bytes[0] !== 0x03) throw new Error('prefix must be 0x02 or 0x03');
+  secp.Point.fromBytes(bytes); // throws if not on the curve
+  return bytes;
+}
+
 // ---------------------------------------------------------------------------
-// DER encoding (BIP-66 shape). @noble v2 only exposes compact (r||s), so the
-// Bitcoin-flavoured DER wrapper is built here — and it is exactly the part a
-// student wants to see, not hide in a library.
+// DER encoding/decoding (BIP-66 shape). @noble v2 only exposes compact (r||s),
+// so the Bitcoin-flavoured DER wrapper is built here — and it is exactly the
+// part a student wants to see, not hide in a library.
 // ---------------------------------------------------------------------------
 function derInt(be32: Uint8Array): Uint8Array {
-  // strip leading zero bytes, but keep one if the high bit would otherwise set
   let i = 0;
   while (i < be32.length - 1 && be32[i] === 0) i++;
   let v = be32.slice(i);
@@ -120,6 +171,7 @@ export function rsToDER(r: Uint8Array, s: Uint8Array): Uint8Array {
 }
 export function derToRS(der: Uint8Array): { r: bigint; s: bigint } {
   if (der[0] !== 0x30) throw new Error('bad DER: no sequence');
+  if (der[1] !== der.length - 2) throw new Error('bad DER: length mismatch');
   let p = 2;
   if (der[p] !== 0x02) throw new Error('bad DER: r not an integer');
   p++;
@@ -130,8 +182,62 @@ export function derToRS(der: Uint8Array): { r: bigint; s: bigint } {
   p++;
   const slen = der[p++];
   const s = der.slice(p, p + slen);
+  if (p + slen !== der.length) throw new Error('bad DER: trailing bytes');
   const toBig = (x: Uint8Array) => (x.length ? BigInt('0x' + bytesToHex(x)) : 0n);
   return { r: toBig(r), s: toBig(s) };
+}
+
+export const SIGHASH_TYPES: Record<number, string> = {
+  0x01: 'SIGHASH_ALL',
+  0x02: 'SIGHASH_NONE',
+  0x03: 'SIGHASH_SINGLE',
+  0x81: 'SIGHASH_ALL | ANYONECANPAY',
+  0x82: 'SIGHASH_NONE | ANYONECANPAY',
+  0x83: 'SIGHASH_SINGLE | ANYONECANPAY',
+};
+
+export interface SigInspection {
+  ok: boolean; // structurally parseable as DER || hashType
+  derHex: string;
+  rHex: string;
+  sHex: string;
+  hashType: number;
+  hashTypeName: string;
+  hashTypeSupported: boolean;
+  lowS: boolean;
+  error?: string;
+}
+
+/** Decode a scriptSig signature (DER || hashType) into inspectable fields. */
+export function inspectSignature(sigWithType: Uint8Array): SigInspection {
+  const blank: SigInspection = {
+    ok: false,
+    derHex: bytesToHex(sigWithType),
+    rHex: '',
+    sHex: '',
+    hashType: sigWithType.length ? sigWithType[sigWithType.length - 1] : 0,
+    hashTypeName: 'n/a',
+    hashTypeSupported: false,
+    lowS: false,
+  };
+  try {
+    if (sigWithType.length < 9) throw new Error('signature too short');
+    const hashType = sigWithType[sigWithType.length - 1];
+    const der = sigWithType.slice(0, sigWithType.length - 1);
+    const { r, s } = derToRS(der);
+    return {
+      ok: true,
+      derHex: bytesToHex(der),
+      rHex: bytesToHex(bigintTo32be(r)),
+      sHex: bytesToHex(bigintTo32be(s)),
+      hashType,
+      hashTypeName: SIGHASH_TYPES[hashType] ?? `unknown (0x${hashType.toString(16)})`,
+      hashTypeSupported: hashType === SIGHASH_ALL,
+      lowS: s <= HALF_N,
+    };
+  } catch (e) {
+    return { ...blank, error: (e as Error).message };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -151,28 +257,39 @@ export interface SpendContext {
   locktime: number;
 }
 
-/** Serialize the transaction for signing input 0 with SIGHASH_ALL, then append
- *  the 4-byte hash type. This is the exact legacy preimage Bitcoin double-SHA256s. */
+export interface SighashSegment {
+  label: string;
+  bytes: Uint8Array;
+  note: string;
+}
+
+/** The legacy SIGHASH_ALL preimage, broken into the fields that get
+ *  concatenated and double-SHA256'd. The UI renders this as an annotated table
+ *  and diffs the segments between the original and tampered transactions. */
+export function sighashSegments(ctx: SpendContext): SighashSegment[] {
+  return [
+    { label: 'version', bytes: u32le(ctx.version), note: 'transaction version (4-byte LE)' },
+    { label: 'input count', bytes: varint(1), note: 'number of inputs (varint)' },
+    { label: 'prev txid', bytes: ctx.prevTxid, note: 'outpoint being spent (32 bytes, internal order)' },
+    { label: 'prev vout', bytes: u32le(ctx.vout), note: 'output index in that tx (4-byte LE)' },
+    { label: 'subscript len', bytes: varint(ctx.subscript.length), note: 'length of the script being signed (varint)' },
+    { label: 'subscript', bytes: ctx.subscript, note: 'the scriptPubKey being spent (the P2PKH lock)' },
+    { label: 'sequence', bytes: u32le(ctx.sequence), note: 'input sequence number (4-byte LE)' },
+    { label: 'output count', bytes: varint(1), note: 'number of outputs (varint)' },
+    { label: 'output value', bytes: u64le(ctx.outValue), note: 'amount in satoshis (8-byte LE)' },
+    { label: 'output script len', bytes: varint(ctx.outScript.length), note: 'length of the destination script (varint)' },
+    { label: 'output script', bytes: ctx.outScript, note: 'destination scriptPubKey' },
+    { label: 'locktime', bytes: u32le(ctx.locktime), note: 'transaction locktime (4-byte LE)' },
+    { label: 'hash type', bytes: u32le(SIGHASH_ALL), note: 'SIGHASH_ALL appended before hashing (4-byte LE)' },
+  ];
+}
+
 export function sighashPreimage(ctx: SpendContext): Uint8Array {
-  return concat(
-    u32le(ctx.version),
-    varint(1),
-    ctx.prevTxid,
-    u32le(ctx.vout),
-    varint(ctx.subscript.length),
-    ctx.subscript,
-    u32le(ctx.sequence),
-    varint(1),
-    u64le(ctx.outValue),
-    varint(ctx.outScript.length),
-    ctx.outScript,
-    u32le(ctx.locktime),
-    u32le(SIGHASH_ALL), // hash type, little-endian 4 bytes
-  );
+  return concat(...sighashSegments(ctx).map((s) => s.bytes));
 }
 
 export function legacySighash(ctx: SpendContext): Uint8Array {
-  return dsha256(sighashPreimage(ctx));
+  return sha256d(sighashPreimage(ctx));
 }
 
 // ---------------------------------------------------------------------------
@@ -186,19 +303,34 @@ export function signSighash(sighash: Uint8Array, priv: Uint8Array): Uint8Array {
   return concat(der, Uint8Array.of(SIGHASH_ALL));
 }
 
+/** Like signSighash but flips s to n−s, producing a mathematically valid but
+ *  non-standard HIGH-S signature (BIP-146 policy rejects it). For edge cases. */
+export function signSighashHighS(sighash: Uint8Array, priv: Uint8Array): Uint8Array {
+  const sig = secp.sign(sighash, priv);
+  const highS = N - sig.s;
+  const der = rsToDER(bigintTo32be(sig.r), bigintTo32be(highS));
+  return concat(der, Uint8Array.of(SIGHASH_ALL));
+}
+
 /** OP_CHECKSIG's predicate: does `sigWithType` (DER||hashType) verify `pub`
  *  against `sighash`? Mirrors consensus: any malformed/out-of-range/forged
- *  signature simply yields false rather than throwing. */
-export function checkSig(sigWithType: Uint8Array, pub: Uint8Array, sighash: Uint8Array): boolean {
+ *  signature simply yields false rather than throwing. `lowS` defaults to true
+ *  (BIP-146 policy); pass false to see whether a high-S sig is otherwise valid. */
+export function checkSig(
+  sigWithType: Uint8Array,
+  pub: Uint8Array,
+  sighash: Uint8Array,
+  lowS = true,
+): boolean {
   if (sigWithType.length < 9) return false;
   try {
     const der = sigWithType.slice(0, sigWithType.length - 1); // drop hash-type byte
     const { r, s } = derToRS(der);
     const sig = new secp.Signature(r, s); // throws if r or s ∉ [1, n)
-    return secp.verify(sig.toCompactRawBytes(), sighash, pub);
+    return secp.verify(sig.toCompactRawBytes(), sighash, pub, { lowS });
   } catch {
     return false;
   }
 }
 
-export { secp };
+export { secp, N as CURVE_N, HALF_N };

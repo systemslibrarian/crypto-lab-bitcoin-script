@@ -22,10 +22,10 @@ describe('ui mounts and the stepper drives execution', () => {
     mountApp(root);
   });
 
-  it('renders the hero, all six sections, and four scenario buttons', () => {
+  it('renders the hero, all six sections, and seven scenario buttons', () => {
     expect(document.querySelector('h1')?.textContent).toMatch(/Bitcoin Script/i);
     expect(document.querySelectorAll('.lab-section').length).toBe(6);
-    expect(document.querySelectorAll('.scenario-btn').length).toBe(4);
+    expect(document.querySelectorAll('.scenario-btn').length).toBe(7); // 4 canonical + 3 edge
   });
 
   it('exposes a valid aria-pressed state on the scenario toggle buttons', () => {
@@ -69,7 +69,7 @@ describe('ui mounts and the stepper drives execution', () => {
   it('regenerating keys does not throw and keeps the demo runnable', () => {
     const regen = byText('button', /New keys/)!;
     expect(() => regen.click()).not.toThrow();
-    expect(document.querySelectorAll('.scenario-btn').length).toBe(4);
+    expect(document.querySelectorAll('.scenario-btn').length).toBe(7);
     runToEnd();
     expect(document.querySelector('.verdict')?.classList.contains('verdict-accept')).toBe(true);
   });

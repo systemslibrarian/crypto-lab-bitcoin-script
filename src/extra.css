@@ -204,11 +204,15 @@
 .token {
   font-family: var(--mono);
   font-size: 12.5px;
+  font-weight: 600;
+  min-height: 0; /* reset the global button tap-target height */
+  line-height: 1.2;
   padding: 5px 9px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--line-strong);
   background: var(--panel);
   color: var(--ink-soft);
+  cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
 }
 .token.executed {
@@ -410,4 +414,355 @@
   .kv-hint {
     grid-column: 1;
   }
+}
+
+/* ============================================================
+   Phase 1–4 additions: copy/hex fields, inspectors, advanced
+   inputs, reversible stepper, step diff, scenario matrix.
+   ============================================================ */
+
+/* ---------- copy button + hex fields ---------- */
+.copy-btn {
+  min-height: 0;
+  padding: 4px 9px;
+  font-size: 13px;
+  line-height: 1;
+  border-radius: var(--radius-sm);
+}
+.hex-field {
+  margin: 10px 0;
+}
+.hex-field-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.hex-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+}
+.hex-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px 10px;
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+.hex-scroll:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
+}
+.hex-scroll code {
+  color: var(--ink-strong);
+  font-size: 12px;
+}
+
+/* ---------- inspectors ---------- */
+.inspectors {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.inspector {
+  background: var(--panel-strong);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0 16px;
+}
+.inspector > summary {
+  cursor: pointer;
+  padding: 14px 0;
+  font-weight: 700;
+  color: var(--ink-strong);
+  list-style-position: inside;
+}
+.inspector[open] > summary {
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 12px;
+}
+.inspector > div {
+  padding-bottom: 16px;
+}
+.insp-help {
+  margin: 0 0 12px;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+.seg-table .seg-bytes {
+  word-break: break-all;
+}
+.seg-note {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+.seg-changed {
+  background: var(--warning-bg);
+}
+.seg-changed td:first-child {
+  font-weight: 700;
+  color: var(--warning-ink);
+}
+.seg-was {
+  color: var(--fail-ink);
+  font-style: italic;
+}
+.insp-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+}
+.verify-line {
+  margin: 12px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.verify-aside {
+  color: var(--ink-soft);
+  font-size: 12.5px;
+}
+
+/* ---------- HASH160 pipeline ---------- */
+.pipe-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 0 6px 12px;
+  border-left: 2px solid var(--line-strong);
+  margin-left: 6px;
+}
+.pipe-arrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent-2);
+  flex: 0 0 auto;
+}
+.pipe-row code {
+  color: var(--ink-strong);
+  word-break: break-all;
+}
+.pipe-compare {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin: 14px 0 4px;
+}
+.pipe-cap {
+  display: block;
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+  margin-bottom: 2px;
+}
+.pipe-compare code {
+  word-break: break-all;
+  color: var(--pass-ink);
+}
+.pipe-compare code.mismatch {
+  color: var(--fail-ink);
+}
+
+/* ---------- advanced inputs ---------- */
+.advanced {
+  margin: 14px 0 6px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.advanced > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--accent);
+  font-size: 14px;
+}
+.adv-help {
+  margin: 10px 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+.adv-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px 12px;
+  margin-bottom: 8px;
+}
+.adv-label {
+  font-size: 12.5px;
+  color: var(--ink);
+  font-weight: 600;
+}
+.adv-input {
+  width: 100%;
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 9px 11px;
+  background: var(--bg-soft);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  color: var(--ink-strong);
+}
+.adv-input:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 1px;
+}
+.adv-err {
+  min-height: 18px;
+  margin: 4px 0;
+  color: var(--fail-ink);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.adv-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ---------- scenario groups ---------- */
+.pick-group-label {
+  display: block;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-soft);
+  margin: 8px 0 4px;
+}
+.scenario-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.scenario-btn.edge {
+  font-style: italic;
+}
+
+/* ---------- reversible stepper controls ---------- */
+.speed-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+.speed-sel {
+  font-family: var(--sans);
+  font-size: 13px;
+  padding: 8px 10px;
+  min-height: 44px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--panel-strong);
+  color: var(--ink-strong);
+  cursor: pointer;
+}
+.scrubber-wrap {
+  margin-top: 12px;
+}
+.scrubber {
+  width: 100%;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.scrubber:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
+}
+
+/* ---------- step diff ---------- */
+.step-diff {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.step-diff:empty {
+  display: none;
+}
+.diff-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.diff-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  min-width: 56px;
+}
+.diff-chip {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+}
+.diff-chip.pop {
+  background: var(--fail-bg);
+  color: var(--fail-ink);
+}
+.diff-chip.push {
+  background: var(--pass-bg);
+  color: var(--pass-ink);
+}
+.diff-none {
+  color: var(--ink-faint);
+}
+
+/* ---------- comparison matrix ---------- */
+.matrix-heading {
+  font-size: 16px;
+  color: var(--ink-strong);
+  margin: 24px 0 10px;
+}
+.matrix-table {
+  font-size: 13px;
+}
+.matrix-table th {
+  white-space: nowrap;
+}
+.matrix-active {
+  background: var(--metric-bg);
+}
+.matrix-jump {
+  min-height: 0;
+  padding: 4px 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid transparent;
+  text-align: left;
+}
+.matrix-jump:hover {
+  border-color: var(--line-strong);
+}
+.verdict-pill {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+.verdict-pill.ok {
+  background: var(--pass-bg);
+  color: var(--pass-ink);
+}
+.verdict-pill.no {
+  background: var(--fail-bg);
+  color: var(--fail-ink);
 }

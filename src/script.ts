@@ -45,6 +45,8 @@ export interface TraceStep {
   token: string; // how this element prints in a script, e.g. "OP_DUP" or "<sig>"
   action: string; // plain-language description of what happened
   stackAfter: StackItem[];
+  popped: StackItem[]; // items this step consumed from the stack
+  pushed: StackItem[]; // items this step produced onto the stack
   status: StepStatus;
   note?: string;
 }
@@ -127,7 +129,8 @@ function isTruthy(item: StackItem | undefined): boolean {
 
 /**
  * Execute scriptSig followed by scriptPubKey, recording a trace step per
- * element. Validity = no abort, and a single truthy value left on the stack.
+ * element. Validity = the script never aborts AND it leaves a truthy value on
+ * top of the stack (Bitcoin's top-of-stack truthiness rule).
  */
 export function execute(
   scriptSig: ScriptElement[],
@@ -139,12 +142,26 @@ export function execute(
   let n = 0;
   let aborted = false;
   let failReason: string | undefined;
+  let prevSnap: StackItem[] = [];
 
   const snapshot = (): StackItem[] =>
     stack.map((s) => ({ hex: bytesToHex(s.bytes) || '(empty)', label: s.label }));
 
-  const push = (token: string, action: string, status: StepStatus, note?: string) =>
-    steps.push({ n: ++n, token, action, stackAfter: snapshot(), status, note });
+  // The delta between consecutive step snapshots is exactly what that step
+  // consumed and produced — stack ops only ever touch the top region.
+  const delta = (before: StackItem[], after: StackItem[]) => {
+    let i = 0;
+    const m = Math.min(before.length, after.length);
+    while (i < m && before[i].hex === after[i].hex && before[i].label === after[i].label) i++;
+    return { popped: before.slice(i), pushed: after.slice(i) };
+  };
+
+  const push = (token: string, action: string, status: StepStatus, note?: string) => {
+    const after = snapshot();
+    const { popped, pushed } = delta(prevSnap, after);
+    steps.push({ n: ++n, token, action, stackAfter: after, popped, pushed, status, note });
+    prevSnap = after;
+  };
 
   const all = [...scriptSig, ...scriptPubKey];
 
