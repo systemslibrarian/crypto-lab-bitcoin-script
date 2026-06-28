@@ -433,19 +433,25 @@ function interactive(): HTMLElement {
   }
 
   function hash160Inspector(sc: BuiltScenario): HTMLElement {
-    const offeredPub = hexToBytes(sc.offeredPubHex);
-    const pipe = hash160Pipeline(offeredPub);
+    // OP_DUP duplicates the stack top and OP_HASH160 hashes THAT — i.e. the last
+    // item scriptSig pushed. In canonical P2PKH that is the public key; in the
+    // "swapped order" edge case it is the signature, which is the whole point.
+    const pushes = sc.scriptSig.filter((e): e is Extract<ScriptElement, { kind: 'push' }> => e.kind === 'push');
+    const top = pushes[pushes.length - 1];
+    const hashedBytes = top ? top.bytes : new Uint8Array(0);
+    const hashedLabel = top ? top.label : 'top item';
+    const pipe = hash160Pipeline(hashedBytes);
     const offeredHash = bytesToHex(pipe.ripemd160);
     const committed = sc.ownerPubKeyHashHex;
     const match = offeredHash === committed;
     const body = h('div', {},
-      h('p', { class: 'insp-help' }, 'OP_HASH160 hashes the offered public key and OP_EQUALVERIFY compares it to the pubKeyHash baked into the lock. They must match for the script to continue.'),
-      hexField('offered pubKey (33 bytes)', sc.offeredPubHex),
+      h('p', { class: 'insp-help' }, 'OP_DUP duplicates the top stack item and OP_HASH160 hashes it; OP_EQUALVERIFY then compares the result to the pubKeyHash baked into the lock. They must match for the script to continue.'),
+      hexField(`${hashedLabel} on top of stack (${hashedBytes.length} bytes)`, bytesToHex(hashedBytes)),
       h('div', { class: 'pipe-row' }, h('span', { class: 'pipe-arrow' }, '↓ SHA-256'), h('code', {}, shortHex(bytesToHex(pipe.sha256), 14, 10))),
       h('div', { class: 'pipe-row' }, h('span', { class: 'pipe-arrow' }, '↓ RIPEMD-160'), h('code', {}, offeredHash)),
       h('div', { class: 'pipe-compare' },
-        h('div', {}, h('span', { class: 'pipe-cap' }, 'HASH160(offered key)'), h('code', { class: match ? '' : 'mismatch' }, offeredHash)),
-        h('div', {}, h('span', { class: 'pipe-cap' }, 'committed pubKeyHash'), h('code', {}, committed)),
+        h('div', {}, h('span', { class: 'pipe-cap' }, `HASH160(${hashedLabel})`), h('code', { class: match ? 'ok' : 'mismatch' }, offeredHash)),
+        h('div', {}, h('span', { class: 'pipe-cap' }, 'committed pubKeyHash'), h('code', { class: 'committed' }, committed)),
       ),
       h('p', { class: 'verify-line' }, statusChip(match, 'match → OP_EQUALVERIFY passes', 'mismatch → OP_EQUALVERIFY aborts')),
     );

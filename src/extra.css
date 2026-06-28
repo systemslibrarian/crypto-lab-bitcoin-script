@@ -568,6 +568,9 @@
 }
 .pipe-compare code {
   word-break: break-all;
+  color: var(--ink-strong);
+}
+.pipe-compare code.ok {
   color: var(--pass-ink);
 }
 .pipe-compare code.mismatch {

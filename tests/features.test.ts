@@ -83,6 +83,14 @@ describe('edge-case scenarios', () => {
     const executed = Array.from(document.querySelectorAll('.token.executed')).map((t) => t.textContent);
     expect(executed).not.toContain('OP_CHECKSIG');
   });
+
+  it('swapped order: HASH160 inspector hashes the signature (not the key) and shows a mismatch', () => {
+    scenarioBtn(/Swapped/).click();
+    const inspText = document.querySelector('.inspectors')?.textContent || '';
+    // the hashed top-of-stack item is the signature here, and it must not match
+    expect(inspText).toMatch(/signature on top of stack/);
+    expect(inspText).toMatch(/mismatch → OP_EQUALVERIFY aborts/);
+  });
 });
 
 describe('sighash inspector reflects the tampered transaction', () => {
