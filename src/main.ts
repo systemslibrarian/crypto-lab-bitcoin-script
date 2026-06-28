@@ -59,7 +59,7 @@ function selfTest(): void {
 
 function boot(): void {
   const root = document.getElementById('app');
-  if (!(root instanceof HTMLDivElement)) throw new Error('#app root not found');
+  if (!(root instanceof HTMLElement)) throw new Error('#app root not found');
   mountApp(root);
   wireThemeToggle();
   selfTest();
