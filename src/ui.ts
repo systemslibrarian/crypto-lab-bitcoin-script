@@ -200,9 +200,9 @@ function interactive(): HTMLElement {
   const txPanel = h('div', { class: 'panel-card tx-panel' });
   const scriptPanel = h('div', { class: 'panel-card script-panel' });
   const tokenStrip = h('div', { class: 'token-strip', 'aria-hidden': 'true' });
-  const stackView = h('div', { class: 'stack-view' });
+  const stackView = h('div', { class: 'stack-view', role: 'group', 'aria-label': 'Script execution stack' });
   const stepDesc = h('div', { class: 'step-desc', role: 'status', 'aria-live': 'polite' });
-  const verdict = h('div', { class: 'verdict' });
+  const verdict = h('div', { class: 'verdict', role: 'status', 'aria-live': 'polite' });
   const stepBtn = h('button', { type: 'button' }, 'Step ▶');
   const autoBtn = h('button', { type: 'button', class: 'secondary' }, 'Auto-run');
   const resetBtn = h('button', { type: 'button', class: 'secondary' }, '↺ Reset');
@@ -390,7 +390,10 @@ function interactive(): HTMLElement {
     renderStack();
     renderStepDesc();
     renderVerdict();
-    stepBtn.toggleAttribute('disabled', cursor >= steps.length);
+    const atEnd = cursor >= steps.length;
+    // Don't strand keyboard focus on the Step button when it disables at the end.
+    if (atEnd && document.activeElement === stepBtn) resetBtn.focus();
+    stepBtn.toggleAttribute('disabled', atEnd);
   }
 
   // --- controls ---

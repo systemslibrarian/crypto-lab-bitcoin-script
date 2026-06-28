@@ -152,12 +152,14 @@ body {
   text-transform: uppercase;
   color: var(--accent-2);
   margin: 0 0 10px;
+  padding-right: 52px; /* clear the absolute theme toggle */
 }
 .hero-panel h1 {
   font-size: clamp(28px, 4vw, 40px);
   margin: 0 0 14px;
   color: var(--ink-strong);
   letter-spacing: -0.01em;
+  padding-right: 52px; /* reserve room for the absolute theme toggle */
 }
 .hero-panel p.hero-lede {
   font-size: 17px;
@@ -188,7 +190,8 @@ body {
   color: var(--accent-2);
   font-family: var(--mono);
   font-size: 12.5px;
-  border-radius: 999px;
+  border-radius: 14px;
+  max-width: 100%; /* never force horizontal scroll on narrow screens */
 }
 
 /* ---------- Theme toggle (circular, top-right) ---------- */
