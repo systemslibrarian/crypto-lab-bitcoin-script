@@ -28,6 +28,16 @@ describe('ui mounts and the stepper drives execution', () => {
     expect(document.querySelectorAll('.scenario-btn').length).toBe(4);
   });
 
+  it('exposes a valid aria-pressed state on the scenario toggle buttons', () => {
+    const btns = Array.from(document.querySelectorAll('.scenario-btn'));
+    // every button must carry a literal "true"/"false" (never "" or missing)
+    for (const b of btns) {
+      expect(['true', 'false']).toContain(b.getAttribute('aria-pressed'));
+    }
+    // exactly one is pressed (the active scenario)
+    expect(btns.filter((b) => b.getAttribute('aria-pressed') === 'true')).toHaveLength(1);
+  });
+
   it('valid scenario steps through to an ACCEPT verdict', () => {
     runToEnd();
     const verdict = document.querySelector('.verdict');

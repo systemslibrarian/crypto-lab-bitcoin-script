@@ -119,9 +119,6 @@ export function serializeScript(els: ScriptElement[]): Uint8Array {
 }
 
 // ---- the interpreter ------------------------------------------------------
-const TRUE_ITEM: StackItem = { hex: '01', label: 'TRUE' };
-const FALSE_ITEM: StackItem = { hex: '', label: 'FALSE (empty)' };
-
 function isTruthy(item: StackItem | undefined): boolean {
   // Bitcoin: empty array and all-zero bytes are false; anything else is true.
   if (!item || item.hex === '') return false;
@@ -260,6 +257,3 @@ function snapshotTop(top: { bytes: Uint8Array; label: string } | undefined): Sta
   if (!top) return undefined;
   return { hex: bytesToHex(top.bytes), label: top.label };
 }
-
-// Re-export so the UI can render canonical true/false chips if needed.
-export { TRUE_ITEM, FALSE_ITEM };
