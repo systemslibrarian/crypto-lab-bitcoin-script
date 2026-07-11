@@ -120,6 +120,13 @@
   color: var(--bg);
   border-color: var(--accent);
 }
+/* The global `[data-theme="light"] button` rule forces white text, which is
+   invisible on the pale --panel-strong background of an inactive scenario
+   button. Restore readable ink for non-active scenario buttons in light theme;
+   the active button keeps white text on its dark accent fill. */
+[data-theme='light'] .scenario-btn:not(.is-active) {
+  color: var(--ink);
+}
 [data-theme='light'] .scenario-btn.is-active {
   color: #fff;
 }
@@ -756,6 +763,12 @@
   color: var(--accent);
   border: 1px solid transparent;
   text-align: left;
+}
+/* The global `[data-theme="light"] button` rule forces white text, which is
+   unreadable on the pale metric-bg fill of the matrix jump buttons. Keep the
+   accent-colored link-style text in light theme. */
+[data-theme='light'] .matrix-jump {
+  color: var(--accent);
 }
 .matrix-jump:hover {
   border-color: var(--line-strong);
