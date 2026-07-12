@@ -114,21 +114,26 @@ function note(text: string): HTMLElement {
 }
 
 function hero(): HTMLElement {
+  // Theme toggle stays in the DOM (main.ts wires #theme-toggle); the shared
+  // topbar hides it and drives theming via #cl-theme-toggle.
   const toggle = h('button', { class: 'theme-toggle', id: 'theme-toggle', type: 'button', 'aria-label': 'Toggle color theme', title: 'Toggle theme' });
   toggle.textContent = '🌙';
-  const d = h('details', {});
+  const d = h('details', { class: 'hero-howto' });
   d.append(
     h('summary', {}, 'How to read this lab'),
     h('p', {}, 'A locking script (scriptPubKey) sets the spending condition; an unlocking script (scriptSig) tries to satisfy it. To validate, Bitcoin runs scriptSig then scriptPubKey on one shared stack. If the script finishes without aborting and leaves a truthy value on top, the spend is authorized. Pick a scenario below, open the inspectors to see the real bytes, then Step the execution forward and back.'),
   );
-  return h('header', { class: 'hero-panel' },
-    toggle,
-    h('p', { class: 'hero-eyebrow' }, 'Bitcoin · Script · Digital signatures'),
-    h('h1', {}, 'Bitcoin Script: locking and unlocking coins'),
-    h('p', { class: 'hero-lede' }, 'Every bitcoin is guarded by a tiny stack program. Build a real Pay-to-Public-Key-Hash lock, sign a transaction with secp256k1/ECDSA, then step through OP_DUP · OP_HASH160 · OP_EQUALVERIFY · OP_CHECKSIG — inspecting every byte — to see why the right key spends, and the wrong key, a forged signature, or a tampered transaction does not.'),
-    h('span', { class: 'hero-metric' }, 'Real secp256k1 · real HASH160 · real legacy sighash · real DER — no backend, no fake math'),
+  const main = h('div', { class: 'cl-hero-main' },
+    h('h1', { class: 'cl-hero-title' }, 'Bitcoin Script'),
+    h('p', { class: 'cl-hero-sub' }, 'Stack machine · P2PKH · secp256k1/ECDSA'),
+    h('p', { class: 'cl-hero-desc' }, 'Build a real P2PKH lock, sign a transaction, then step OP_DUP · OP_HASH160 · OP_EQUALVERIFY · OP_CHECKSIG on one shared stack to watch the script decide whether a spend is authorized.'),
     d,
   );
+  const why = h('aside', { class: 'cl-hero-why', 'aria-label': 'Why it matters' },
+    h('span', { class: 'cl-hero-why-label' }, 'WHY IT MATTERS'),
+    h('p', { class: 'cl-hero-why-text' }, 'Every bitcoin is guarded by this tiny program — it is the actual mechanism that releases coins. Seeing how the wrong key, a forged signature, or a tampered transaction gets rejected is what connects ECDSA math to real on-chain security.'),
+  );
+  return h('header', { class: 'cl-hero' }, toggle, main, why);
 }
 
 function whatIsSection(): HTMLElement {
