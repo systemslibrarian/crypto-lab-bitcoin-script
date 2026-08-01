@@ -15,6 +15,7 @@
   --panel-strong: #232850;
   --line: rgba(255, 255, 255, 0.08);
   --line-strong: rgba(255, 255, 255, 0.16);
+  --line-control: #6f769a;
 
   --ink-strong: #f5f5ff;
   --ink: #d8dbf0;
@@ -57,6 +58,14 @@
   --panel-strong: #f1f1fa;
   --line: rgba(20, 23, 60, 0.08);
   --line-strong: rgba(20, 23, 60, 0.16);
+  /* Control boundaries only (secondary buttons, theme toggle, scenario buttons,
+     advanced inputs, speed select). Those controls are filled with --panel-strong
+     or --bg-soft, which sit at 1.04-1.34:1 against the panel behind them, so the
+     border is the sole boundary and WCAG 2.1 SC 1.4.11 requires 3:1. The
+     translucent --line-strong resolves to ~1.4:1 and stays as-is for decorative
+     rules (tokens, stack items, pipe rows) and for the accent-filled primary
+     button, whose 5.8-7.0:1 fill already identifies it. */
+  --line-control: #818498;
 
   --ink-strong: #14143c;
   --ink: #2a2c5b;
@@ -173,7 +182,7 @@ body {
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--line-control);
   background-color: var(--panel-strong);
   color: var(--ink-strong);
   display: inline-flex;
@@ -284,7 +293,7 @@ button:focus-visible {
 button.secondary {
   background-color: var(--panel-strong);
   color: var(--ink-strong);
-  border-color: var(--line-strong);
+  border-color: var(--line-control);
 }
 [data-theme='light'] button.secondary {
   color: var(--ink-strong);

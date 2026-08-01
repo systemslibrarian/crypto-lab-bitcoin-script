@@ -106,7 +106,7 @@
 .scenario-btn {
   background-color: var(--panel-strong);
   color: var(--ink);
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--line-control);
   border-left-width: 4px;
 }
 .scenario-btn.good {
@@ -618,7 +618,7 @@
   font-size: 13px;
   padding: 9px 11px;
   background-color: var(--bg-soft);
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--line-control);
   border-radius: var(--radius-sm);
   color: var(--ink-strong);
 }
@@ -672,7 +672,7 @@
   padding: 8px 1.8rem 8px 10px;
   min-height: 44px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--line-control);
   background-color: var(--panel-strong);
   color: var(--ink-strong);
   cursor: pointer;
