@@ -5,3 +5,7 @@ dist/
 .vite/
 /test-results/
 /playwright-report/
+
+# Review notes kept locally, not part of the shipped demo
+chat*.md
+gem.md
