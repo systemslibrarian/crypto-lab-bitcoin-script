@@ -27,7 +27,38 @@ async function expandAll(page: Page): Promise<void> {
   });
 }
 
+/**
+ * Drive every in-flight animation and transition to its end state, then wait
+ * for the compositor to agree, so axe samples final colours rather than tween
+ * frames.
+ *
+ * `.token` carries `transition: background 0.15s ease, color 0.15s ease`, and
+ * the theme toggle repaints `--panel` / `--ink-soft` underneath it, so flipping
+ * the theme ramps the whole token rail over 150ms. axe reads *computed* colours
+ * at the instant it runs; scanning without settling first measures half-faded
+ * text and reports colour-contrast violations against pixels no user ever sits
+ * and reads (the failure names `button[aria-label="Jump to step 1: <sig>"]` and
+ * friends, and moves around between runs). Settled, both themes are clean, so
+ * this is not masking a real violation — it removes the sampling race so the
+ * gate measures the state the page actually rests in.
+ */
+async function settle(page: Page): Promise<void> {
+  await page.addStyleTag({
+    content: `*,*::before,*::after{
+      animation-duration:0s!important;animation-delay:0s!important;
+      transition-duration:0s!important;transition-delay:0s!important;
+      scroll-behavior:auto!important;
+    }`,
+  });
+  await page.evaluate(async () => {
+    await Promise.all(
+      document.getAnimations().map((a) => a.finished.catch(() => undefined)),
+    );
+  });
+}
+
 async function scan(page: Page): Promise<void> {
+  await settle(page);
   const results = await new AxeBuilder({ page }).withTags(TAGS).analyze();
   const summary = results.violations.map((v) => ({
     id: v.id,
