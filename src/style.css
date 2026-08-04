@@ -258,6 +258,35 @@ body {
 }
 
 /* ---------- Generic button ---------- */
+/* The default button ink is themed through a custom property rather than
+   through a `[data-theme='light'] button { color: ... }` rule.
+
+   That rule used to exist, and it was a specificity trap: `[data-theme='light']
+   button` scores one attribute plus one type selector, which outranks a plain
+   single-class rule like `.token { color: var(--ink-soft) }`. So every
+   component button that set its own colour silently lost it in light theme and
+   inherited white — and three separate components (`.secondary`,
+   `.scenario-btn`, `.matrix-jump`) had each been patched individually with
+   another `[data-theme='light'] …` override once someone noticed.
+
+   `.token` was the one nobody noticed: in light theme all seven script tokens
+   rendered as white text on the white `--panel` fill, a measured 1:1 contrast
+   ratio — literally invisible. axe files an exact 1:1 match under `incomplete`
+   rather than `violations`, so the a11y gate never reported it.
+
+   Routing the default through `--btn-ink` drops the base rule to a single type
+   selector, so any component that declares its own `color` now wins in both
+   themes by construction and the whole class of bug is gone rather than patched
+   a fourth time. */
+:root,
+:root[data-theme='dark'] {
+  /* Dark accent text reads against the bright orange accent. */
+  --btn-ink: var(--bg);
+}
+[data-theme='light'] {
+  /* Light theme uses a dark accent, so white text there. */
+  --btn-ink: #ffffff;
+}
 button {
   font-family: var(--sans);
   font-size: 14px;
@@ -267,14 +296,9 @@ button {
   border-radius: var(--radius-sm);
   border: 1px solid var(--line-strong);
   background-color: var(--accent);
-  /* Dark accent text reads against the bright orange accent; light theme uses
-     a dark accent, so white text there. */
-  color: var(--bg);
+  color: var(--btn-ink);
   cursor: pointer;
   transition: filter 0.15s ease, transform 0.05s ease;
-}
-[data-theme='light'] button {
-  color: #ffffff;
 }
 button:hover {
   filter: brightness(1.08);
@@ -294,9 +318,6 @@ button.secondary {
   background-color: var(--panel-strong);
   color: var(--ink-strong);
   border-color: var(--line-control);
-}
-[data-theme='light'] button.secondary {
-  color: var(--ink-strong);
 }
 
 /* ---------- Grids ---------- */

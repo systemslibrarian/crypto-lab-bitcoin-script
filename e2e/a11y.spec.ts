@@ -1,64 +1,165 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 
+import { auditContrast, formatContrastFailures } from './contrast';
+
 /**
  * WCAG regression gate. Deploys are already gated on the self-test / smoke
- * vectors; this gates them on accessibility the same way. Scans the full page
- * with every collapsible expanded, in both themes.
+ * vectors and on the claims spec; this gates them on accessibility the same way.
  *
- * This lab has no <details>; its content is a step-through stack machine that
- * is always visible. We still expand any <details> defensively and reveal
- * class-toggled panels so nothing hidden escapes the scan.
+ * Three things this file deliberately does NOT do, two of which it used to:
+ *
+ * 1. It does not inject `transition: none` / `transition-duration: 0s`. While
+ *    that injection was present the suite was structurally unable to observe a
+ *    transition or theme-swap defect, because it had deleted the very thing it
+ *    was meant to check — and the `.token` rail's 150ms background/colour ramp
+ *    on theme flip was exactly such a thing. Motion is settled honestly
+ *    instead: `page.emulateMedia({ reducedMotion: 'reduce' })`, which exercises
+ *    the stylesheet's real `prefers-reduced-motion` block, plus a poll until
+ *    nothing is animating.
+ *
+ *    `test.use({ reducedMotion: 'reduce' })` is NOT equivalent — on Playwright
+ *    1.61.1 it silently does nothing, both at file level and inside
+ *    `test.describe`, and the page still reports `matches === false`. Hence
+ *    `emulateMedia` plus `assertReducedMotion`, so a regression to the no-op
+ *    form fails loudly rather than quietly disabling the premise.
+ *
+ * 2. It does not scan only the untouched page. `<main id="app">` ships empty and
+ *    is filled by `mountApp`, and several rendered states — the ACCEPT and
+ *    REJECT verdict panels, the populated stack, the popped/pushed diff chips,
+ *    the malformed-DER parse-error branch of the signature decoder, the
+ *    advanced drawer's validation alert — exist only after user input. A gate
+ *    that scans first paint alone cannot see a violation in any of them, so the
+ *    page is driven into each and scanned there.
+ *
+ * 3. It does not trust axe as the whole contrast oracle. Contrast is
+ *    additionally measured arithmetically in `./contrast`, against the surface
+ *    the text is really composited onto: axe refuses to compute contrast over a
+ *    background gradient and files those nodes under "incomplete", which never
+ *    reaches the violations array this gate asserts on.
+ *
+ * Every scan also asserts its content is actually on screen first, via
+ * `expectRendered`, so an empty container can never be scanned and pass having
+ * checked nothing.
  */
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 
-async function expandAll(page: Page): Promise<void> {
-  await page.evaluate(() => {
-    for (const details of document.querySelectorAll('details')) {
-      (details as HTMLDetailsElement).open = true;
-    }
-    // Reveal any class-toggled collapsibles so their content is scanned.
-    for (const el of document.querySelectorAll(
-      '.accordion, .collapsible, .explainer, .step, .panel'
-    )) {
-      el.classList.add('open', 'active', 'is-open', 'expanded');
-    }
-  });
+/** Fail loudly if reduced motion is not actually in effect. */
+async function assertReducedMotion(page: Page): Promise<void> {
+  const matches = await page.evaluate(
+    () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+  expect(
+    matches,
+    'reduced motion is not in effect — page.emulateMedia is the only form that works here'
+  ).toBe(true);
+}
+
+/** Let the browser get as far as the next two animation frames. */
+async function frames(page: Page): Promise<void> {
+  await page.evaluate(
+    () => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())))
+  );
 }
 
 /**
- * Drive every in-flight animation and transition to its end state, then wait
- * for the compositor to agree, so axe samples final colours rather than tween
- * frames.
+ * Wait until motion has genuinely stopped, rather than deleting animations.
  *
- * `.token` carries `transition: background 0.15s ease, color 0.15s ease`, and
- * the theme toggle repaints `--panel` / `--ink-soft` underneath it, so flipping
- * the theme ramps the whole token rail over 150ms. axe reads *computed* colours
- * at the instant it runs; scanning without settling first measures half-faded
- * text and reports colour-contrast violations against pixels no user ever sits
- * and reads (the failure names `button[aria-label="Jump to step 1: <sig>"]` and
- * friends, and moves around between runs). Settled, both themes are clean, so
- * this is not masking a real violation — it removes the sampling race so the
- * gate measures the state the page actually rests in.
+ * Two failure modes had to be designed around, both observed on this page:
+ *
+ * 1. A CSS transition does not appear in `document.getAnimations()` until the
+ *    style recalc that starts it has run. A poll issued straight after a
+ *    mutation therefore sees an empty list, concludes "nothing is animating",
+ *    and measures the frame *before* the transition. That is how the theme-swap
+ *    check first came back reporting light-theme ink composited over
+ *    dark-theme panels at 1.08:1. Hence the leading frame wait.
+ *
+ * 2. A theme flip does not produce one tidy batch. Instrumenting it showed
+ *    ~594 transitions created at once and then further waves (3, then 17, then
+ *    66, then 15) over the next several hundred milliseconds as the repaint
+ *    propagates. Between waves the running count touches zero, so a poll for
+ *    "nothing is running right now" can and does exit through a gap mid-drain.
+ *    Hence quiescence is required to *hold* for a run of consecutive frames.
+ *
+ * The fix for both is to wait longer and look harder, never to re-add an
+ * injected `transition: none` — that would delete the very behaviour this gate
+ * exists to check.
  */
+const QUIET_FRAMES = 10;
+
 async function settle(page: Page): Promise<void> {
-  await page.addStyleTag({
-    content: `*,*::before,*::after{
-      animation-duration:0s!important;animation-delay:0s!important;
-      transition-duration:0s!important;transition-delay:0s!important;
-      scroll-behavior:auto!important;
-    }`,
+  await frames(page);
+  await page.evaluate(() => {
+    (window as unknown as { __quietFrames?: number }).__quietFrames = 0;
   });
-  await page.evaluate(async () => {
-    await Promise.all(
-      document.getAnimations().map((a) => a.finished.catch(() => undefined)),
-    );
+  await page.waitForFunction(
+    (need: number) => {
+      const w = window as unknown as { __quietFrames?: number };
+      const busy = document
+        .getAnimations()
+        .some((a) => a.playState === 'running' || a.playState === 'pending');
+      if (busy) {
+        w.__quietFrames = 0;
+        return false;
+      }
+      w.__quietFrames = (w.__quietFrames ?? 0) + 1;
+      return w.__quietFrames >= need;
+    },
+    QUIET_FRAMES,
+    { timeout: 15_000 }
+  );
+  await frames(page);
+}
+
+/**
+ * Guard against the empty-container scan. Every scan names the content it
+ * expects to be looking at; if that content is missing the test fails here
+ * rather than passing an axe run over nothing.
+ */
+async function expectRendered(page: Page, selectors: string[]): Promise<void> {
+  for (const sel of selectors) {
+    const locator = page.locator(sel).first();
+    await expect(locator, `expected content at ${sel}`).toBeVisible();
+    const text = (await locator.innerText()).trim();
+    expect(text.length, `expected non-empty content at ${sel}`).toBeGreaterThan(0);
+  }
+}
+
+/** Expand every disclosure widget so nothing hidden escapes the scan. */
+async function expandAll(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    for (const details of Array.from(document.querySelectorAll('details'))) {
+      (details as HTMLDetailsElement).open = true;
+    }
   });
 }
 
-async function scan(page: Page): Promise<void> {
+async function open(page: Page, theme: 'dark' | 'light'): Promise<void> {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('.');
+  await assertReducedMotion(page);
+  if (theme === 'light') {
+    await page.locator('#cl-theme-toggle').click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  } else {
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  }
+  // #app ships empty; wait for the real first paint before believing anything.
+  await expectRendered(page, [
+    '.key-panel',
+    '.scenario-buttons',
+    '.token-strip',
+    '.stack-view',
+    '.matrix-table',
+  ]);
+  await expandAll(page);
   await settle(page);
+}
+
+async function scan(page: Page, label: string): Promise<void> {
+  await settle(page);
+
   const results = await new AxeBuilder({ page }).withTags(TAGS).analyze();
   const summary = results.violations.map((v) => ({
     id: v.id,
@@ -66,20 +167,160 @@ async function scan(page: Page): Promise<void> {
     help: v.help,
     nodes: v.nodes.map((n) => n.target.join(' ')).slice(0, 5),
   }));
-  expect(summary).toEqual([]);
+  expect(summary, `axe violations in state: ${label}`).toEqual([]);
+
+  const failures = await auditContrast(page);
+  expect(
+    formatContrastFailures(failures),
+    `measured contrast failures in state: ${label}`
+  ).toEqual([]);
 }
 
-test('no WCAG A/AA violations in dark theme', async ({ page }) => {
-  await page.goto('.');
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+/** Pick a spend scenario by its visible title and wait for the re-render. */
+async function pickScenario(page: Page, title: string): Promise<void> {
+  await page.locator('.scenario-btn', { hasText: title }).click();
+  await expect(page.locator('.scenario-btn.is-active')).toHaveText(title);
   await expandAll(page);
-  await scan(page);
-});
+}
 
-test('no WCAG A/AA violations in light theme', async ({ page }) => {
-  await page.goto('.');
-  await page.locator('#cl-theme-toggle').click();
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+/** Run the current scenario to completion by dragging the scrubber to the end. */
+async function runToVerdict(page: Page): Promise<void> {
+  const scrubber = page.locator('.scrubber');
+  const max = await scrubber.getAttribute('max');
+  await scrubber.fill(String(max));
+  await scrubber.dispatchEvent('input');
+  await expect(page.locator('.verdict-head')).toBeVisible();
   await expandAll(page);
-  await scan(page);
+}
+
+for (const theme of ['dark', 'light'] as const) {
+  test(`no WCAG A/AA violations on first paint (${theme})`, async ({ page }) => {
+    await open(page, theme);
+    await scan(page, `${theme} / initial`);
+  });
+
+  test(`no WCAG A/AA violations mid-execution (${theme})`, async ({ page }) => {
+    await open(page, theme);
+
+    // One step: the stack gains its first item and the popped/pushed diff chips
+    // appear. Neither exists on first paint.
+    await page.locator('button', { hasText: 'Step ▶' }).click();
+    await expectRendered(page, ['.stack-item', '.diff-chip', '.step-desc']);
+    await expect(page.locator('.token.executed').first()).toBeVisible();
+    await scan(page, `${theme} / one step executed`);
+
+    // Halfway: several stack items, an active token, a later opcode's note.
+    const scrubber = page.locator('.scrubber');
+    const max = Number(await scrubber.getAttribute('max'));
+    await scrubber.fill(String(Math.max(1, Math.floor(max / 2))));
+    await scrubber.dispatchEvent('input');
+    await expectRendered(page, ['.stack-item.top', '.token.active']);
+    await scan(page, `${theme} / mid-execution`);
+  });
+
+  test(`no WCAG A/AA violations on the ACCEPT verdict (${theme})`, async ({ page }) => {
+    await open(page, theme);
+    await pickScenario(page, 'Valid spend');
+    await runToVerdict(page);
+    await expect(page.locator('.verdict-accept')).toBeVisible();
+    await expectRendered(page, ['.verdict-accept', '.stack-item.is-true']);
+    await scan(page, `${theme} / verdict ACCEPT`);
+  });
+
+  // Every rejecting scenario paints a different failure surface: a mismatched
+  // HASH160 (auto-opened inspector, `.mismatch`), a red step-desc, the
+  // verdict-reject panel with its reason line, and for `bad-der` the signature
+  // decoder's parse-error branch, which has no other way of being reached.
+  for (const title of [
+    'Wrong public key',
+    'Forged signature',
+    'Tampered transaction',
+    'High-S signature',
+    'Malformed DER',
+    'Swapped scriptSig order',
+  ]) {
+    test(`no WCAG A/AA violations on the REJECT verdict — ${title} (${theme})`, async ({
+      page,
+    }) => {
+      await open(page, theme);
+      await pickScenario(page, title);
+      await runToVerdict(page);
+      await expect(page.locator('.verdict-reject')).toBeVisible();
+      await expectRendered(page, ['.verdict-reject', '.verdict-security']);
+      await scan(page, `${theme} / verdict REJECT — ${title}`);
+    });
+  }
+
+  test(`no WCAG A/AA violations in the advanced-input error state (${theme})`, async ({ page }) => {
+    await open(page, theme);
+
+    // A validation alert only ever exists after a user submits a bad value —
+    // exactly the kind of rendered state a load-time-only scan cannot see.
+    await page.locator('#adv-priv').fill('not-hex');
+    await page.locator('button', { hasText: 'Apply' }).click();
+    await expectRendered(page, ['.adv-err']);
+    await scan(page, `${theme} / advanced input rejected`);
+
+    // ...and the accepted path, which re-derives every key-panel row.
+    await page.locator('#adv-priv').fill('0'.repeat(63) + '1');
+    await page.locator('#adv-val').fill('50000');
+    await page.locator('button', { hasText: 'Apply' }).click();
+    await expect(page.locator('.adv-err')).toBeEmpty();
+    await expect(page.locator('.kv-value').nth(2)).toHaveText(
+      '751e76e8199196d454941c45d1b3a323f1433bd6'
+    );
+    await expandAll(page);
+    await scan(page, `${theme} / advanced input accepted`);
+  });
+
+  test(`no WCAG A/AA violations while auto-run is playing (${theme})`, async ({ page }) => {
+    await open(page, theme);
+
+    // The auto-run button swaps its own class and label mid-flight; that paused
+    // "⏸ Pause" state is a distinct surface nothing else scans.
+    await page.locator('.speed-sel').selectOption('1400');
+    await page.locator('button', { hasText: 'Auto-run' }).click();
+    await expect(page.locator('button', { hasText: '⏸ Pause' })).toBeVisible();
+    await expectRendered(page, ['.stack-item']);
+    await scan(page, `${theme} / auto-run playing`);
+  });
+}
+
+test('the theme swap settles to the same measured colours it rests at', async ({ page }) => {
+  // The `.token` rail transitions background and colour over 150ms, and the
+  // theme toggle repaints `--panel` / `--ink-soft` underneath it. The old gate
+  // erased that transition with an injected `transition-duration: 0s`, which
+  // made it incapable of noticing if the ramp ever landed somewhere unreadable.
+  // Instead: flip the theme for real, wait for the animations to drain, and
+  // assert the settled colours pass — in both directions.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('.');
+  await assertReducedMotion(page);
+  await expectRendered(page, ['.token-strip']);
+  // Open the disclosure widgets so their content is genuinely painted and can
+  // be measured; closed `<details>` content is style-skipped, not just hidden.
+  await expandAll(page);
+
+  for (const expected of ['light', 'dark'] as const) {
+    const before = await page.evaluate(
+      () => getComputedStyle(document.querySelector('.token-strip') as Element).backgroundColor
+    );
+    await page.locator('#cl-theme-toggle').click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', expected);
+    // The attribute flips before the paint does. Wait for a surface colour to
+    // actually change hands, so the measurement below cannot read the old
+    // palette's backgrounds under the new palette's ink.
+    await page.waitForFunction(
+      (prev) =>
+        getComputedStyle(document.querySelector('.token-strip') as Element).backgroundColor !== prev,
+      before,
+      { timeout: 15_000 }
+    );
+    await settle(page);
+    const failures = await auditContrast(page);
+    expect(
+      formatContrastFailures(failures),
+      `measured contrast failures after settling into ${expected}`
+    ).toEqual([]);
+  }
 });
