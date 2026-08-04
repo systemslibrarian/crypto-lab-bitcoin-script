@@ -363,7 +363,7 @@ function interactive(): HTMLElement {
     const t = current().tx;
     txPanel.replaceChildren(
       h('strong', {}, 'Transaction being verified'),
-      h('div', { class: 'table-wrap' }, h('table', { class: 'math-table' }, h('tbody', {},
+      h('div', { class: 'table-wrap', tabindex: '0' }, h('table', { class: 'math-table' }, h('tbody', {},
         row('version', String(t.version)),
         row('input', `${shortHex(t.prevTxidHex, 10, 8)} : ${t.vout}`),
         h('tr', {}, h('td', {}, 'output value'), h('td', { class: 'mono' + (t.tamperedValue ? ' tampered' : '') }, `${t.outValueSats.toLocaleString('en-US')} sat (${satsToBtc(t.outValueSats)})${t.tamperedValue ? '  ⚠ edited after signing' : ''}`)),
@@ -395,7 +395,7 @@ function interactive(): HTMLElement {
     const preimage = bytesToHex(serializeSegments(sc.verifierSegments));
     const body = h('div', {},
       h('p', { class: 'insp-help' }, 'The legacy SIGHASH_ALL preimage is these fields concatenated, then double-SHA256’d. The 32-byte result is what ECDSA signs.'),
-      h('div', { class: 'table-wrap' }, h('table', { class: 'math-table seg-table' }, h('thead', {}, h('tr', {}, h('th', {}, 'field'), h('th', {}, 'bytes'), h('th', {}, 'meaning'))), h('tbody', {}, ...rows))),
+      h('div', { class: 'table-wrap', tabindex: '0' }, h('table', { class: 'math-table seg-table' }, h('thead', {}, h('tr', {}, h('th', {}, 'field'), h('th', {}, 'bytes'), h('th', {}, 'meaning'))), h('tbody', {}, ...rows))),
       hexField('preimage (verifier)', preimage),
       hexField('sighash = SHA256(SHA256(preimage))', sc.execSighashHex),
       ...(sc.signedSighashHex !== sc.execSighashHex
@@ -580,7 +580,7 @@ function interactive(): HTMLElement {
         h('td', {}, h('span', { class: 'verdict-pill ' + (sc.expectSuccess ? 'ok' : 'no') }, sc.expectSuccess ? 'ACCEPT' : 'REJECT')),
       );
     });
-    matrixWrap.replaceChildren(h('div', { class: 'table-wrap' }, h('table', { class: 'math-table matrix-table' }, h('thead', {}, head), h('tbody', {}, ...body))));
+    matrixWrap.replaceChildren(h('div', { class: 'table-wrap', tabindex: '0' }, h('table', { class: 'math-table matrix-table' }, h('thead', {}, head), h('tbody', {}, ...body))));
   }
 
   // --- controls ---

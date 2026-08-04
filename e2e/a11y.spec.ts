@@ -120,10 +120,57 @@ async function settle(page: Page): Promise<void> {
 async function expectRendered(page: Page, selectors: string[]): Promise<void> {
   for (const sel of selectors) {
     const locator = page.locator(sel).first();
-    await expect(locator, `expected content at ${sel}`).toBeVisible();
+    // 30s, not the 5s default. This waits for mountApp's first paint, which is
+    // fast on an idle machine (the whole test runs in ~1.4s) but was measured
+    // missing a 5s deadline on a loaded one. The assertion still requires the
+    // content to appear — it just stops a busy machine producing a red run that
+    // says nothing about the page.
+    await expect(locator, `expected content at ${sel}`).toBeVisible({ timeout: 30_000 });
     const text = (await locator.innerText()).trim();
     expect(text.length, `expected non-empty content at ${sel}`).toBeGreaterThan(0);
   }
+}
+
+/**
+ * WCAG 2.1.1: a container that scrolls must be operable from the keyboard.
+ *
+ * A box with `overflow-x: auto` whose content is wider than it is can only be
+ * panned with a mouse or a touch drag unless it is focusable itself or holds
+ * something focusable to tab to — so a keyboard user simply cannot read the
+ * part that is off-screen. These containers only overflow once real content is
+ * in them, which is why nothing scanning the untouched page ever reports one.
+ * Elements are returned with their measured dimensions so a failure says which
+ * box and by how much.
+ */
+async function unreachableScrollers(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const FOCUSABLE = 'a[href],button,input,select,textarea,[tabindex],summary,[contenteditable]';
+    const describe = (el: Element): string => {
+      let s = el.tagName.toLowerCase();
+      if (el.id) s += `#${el.id}`;
+      const cls = el.getAttribute('class');
+      if (cls) s += `.${cls.trim().split(/\s+/).join('.')}`;
+      return s;
+    };
+    const out: string[] = [];
+    for (const el of Array.from(document.querySelectorAll('body *'))) {
+      if (typeof el.checkVisibility === 'function' && !el.checkVisibility()) continue;
+      const cs = getComputedStyle(el);
+      const scrollsX = /auto|scroll/.test(cs.overflowX) && el.scrollWidth > el.clientWidth + 1;
+      const scrollsY = /auto|scroll/.test(cs.overflowY) && el.scrollHeight > el.clientHeight + 1;
+      if (!scrollsX && !scrollsY) continue;
+      // Reachable either because the box itself takes focus, or because it
+      // contains something focusable that scrolling will follow.
+      if (el.matches(FOCUSABLE) && (el as HTMLElement).tabIndex >= 0) continue;
+      if (el.querySelector(FOCUSABLE)) continue;
+      out.push(
+        `${describe(el)} scrolls ${scrollsX ? `x ${el.scrollWidth}>${el.clientWidth}` : ''}${
+          scrollsY ? ` y ${el.scrollHeight}>${el.clientHeight}` : ''
+        } but is not keyboard reachable`
+      );
+    }
+    return out;
+  });
 }
 
 /** Expand every disclosure widget so nothing hidden escapes the scan. */
@@ -174,6 +221,9 @@ async function scan(page: Page, label: string): Promise<void> {
     formatContrastFailures(failures),
     `measured contrast failures in state: ${label}`
   ).toEqual([]);
+
+  expect(await unreachableScrollers(page), `keyboard-unreachable scrollers in state: ${label}`)
+    .toEqual([]);
 }
 
 /** Pick a spend scenario by its visible title and wait for the re-render. */
@@ -283,6 +333,29 @@ for (const theme of ['dark', 'light'] as const) {
     await expect(page.locator('button', { hasText: '⏸ Pause' })).toBeVisible();
     await expectRendered(page, ['.stack-item']);
     await scan(page, `${theme} / auto-run playing`);
+  });
+}
+
+/**
+ * The horizontal-scroll containers are the point of a narrow viewport, and they
+ * do not overflow at the default 1280px — `#app` caps at 1080px and everything
+ * fits. Checking keyboard reachability only at desktop width would be a check
+ * that can never fail. So this drives the same rich state at phone width, where
+ * the wide byte tables genuinely scroll.
+ */
+for (const theme of ['dark', 'light'] as const) {
+  test(`scroll containers stay operable at narrow widths (${theme})`, async ({ page }) => {
+    // Headroom for CPU contention, not because this scan is slow: run alone it
+    // finishes in about 1.5s. It timed out at the 30s default only while other
+    // suites were competing for the machine. Raising the ceiling costs nothing
+    // when the test passes and avoids a red run that says nothing about the page.
+    test.setTimeout(150_000);
+    await page.setViewportSize({ width: 380, height: 780 });
+    await open(page, theme);
+    await pickScenario(page, 'Tampered transaction');
+    await runToVerdict(page);
+    await expectRendered(page, ['.verdict-reject', '.seg-table']);
+    await scan(page, `${theme} / 380px wide, tampered verdict`);
   });
 }
 
