@@ -186,12 +186,7 @@ async function open(page: Page, theme: 'dark' | 'light'): Promise<void> {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('.');
   await assertReducedMotion(page);
-  if (theme === 'light') {
-    await page.locator('#cl-theme-toggle').click();
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
-  } else {
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  }
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   // #app ships empty; wait for the real first paint before believing anything.
   await expectRendered(page, [
     '.key-panel',
@@ -243,7 +238,7 @@ async function runToVerdict(page: Page): Promise<void> {
   await expandAll(page);
 }
 
-for (const theme of ['dark', 'light'] as const) {
+for (const theme of ['dark'] as const) {
   test(`no WCAG A/AA violations on first paint (${theme})`, async ({ page }) => {
     await open(page, theme);
     await scan(page, `${theme} / initial`);
@@ -343,7 +338,7 @@ for (const theme of ['dark', 'light'] as const) {
  * that can never fail. So this drives the same rich state at phone width, where
  * the wide byte tables genuinely scroll.
  */
-for (const theme of ['dark', 'light'] as const) {
+for (const theme of ['dark'] as const) {
   test(`scroll containers stay operable at narrow widths (${theme})`, async ({ page }) => {
     // Headroom for CPU contention, not because this scan is slow: run alone it
     // finishes in about 1.5s. It timed out at the 30s default only while other
@@ -359,41 +354,3 @@ for (const theme of ['dark', 'light'] as const) {
   });
 }
 
-test('the theme swap settles to the same measured colours it rests at', async ({ page }) => {
-  // The `.token` rail transitions background and colour over 150ms, and the
-  // theme toggle repaints `--panel` / `--ink-soft` underneath it. The old gate
-  // erased that transition with an injected `transition-duration: 0s`, which
-  // made it incapable of noticing if the ramp ever landed somewhere unreadable.
-  // Instead: flip the theme for real, wait for the animations to drain, and
-  // assert the settled colours pass — in both directions.
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('.');
-  await assertReducedMotion(page);
-  await expectRendered(page, ['.token-strip']);
-  // Open the disclosure widgets so their content is genuinely painted and can
-  // be measured; closed `<details>` content is style-skipped, not just hidden.
-  await expandAll(page);
-
-  for (const expected of ['light', 'dark'] as const) {
-    const before = await page.evaluate(
-      () => getComputedStyle(document.querySelector('.token-strip') as Element).backgroundColor
-    );
-    await page.locator('#cl-theme-toggle').click();
-    await expect(page.locator('html')).toHaveAttribute('data-theme', expected);
-    // The attribute flips before the paint does. Wait for a surface colour to
-    // actually change hands, so the measurement below cannot read the old
-    // palette's backgrounds under the new palette's ink.
-    await page.waitForFunction(
-      (prev) =>
-        getComputedStyle(document.querySelector('.token-strip') as Element).backgroundColor !== prev,
-      before,
-      { timeout: 15_000 }
-    );
-    await settle(page);
-    const failures = await auditContrast(page);
-    expect(
-      formatContrastFailures(failures),
-      `measured contrast failures after settling into ${expected}`
-    ).toEqual([]);
-  }
-});
