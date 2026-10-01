@@ -26,6 +26,15 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      # The unit suites, which nothing in this repository ran until now. Five
+      # files, 44 cases, four of them asserting the script engine REJECTS what
+      # it should reject -- so before this step a change that broke a reject
+      # path reached the live site with every gate green. Placed before the
+      # build so a unit failure fails the run in seconds rather than after a
+      # browser download. `vitest run` exits 1 when it matches no files, so
+      # this step cannot pass by silently running nothing.
+      - name: Unit tests (vitest)
+        run: npm test
       - run: npm run build
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
