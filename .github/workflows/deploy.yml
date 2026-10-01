@@ -23,9 +23,25 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          # 20 could not run this lab's unit suites at all. jsdom pulls undici,
+          # whose CacheStorage calls webidl.util.markAsUncloneable, and three of
+          # the five test files died starting their worker on node 20.20.2 with
+          # "markAsUncloneable is not a function". `npm ci` says the same thing
+          # in advance: @asamuzakjp/css-color and @asamuzakjp/dom-selector both
+          # declare `node: ^22.22.2 || ^24.15.0 || >=26.0.0`. Nothing noticed
+          # because nothing called the suites -- a gap that hides the next one.
+          node-version: 24
           cache: npm
       - run: npm ci
+      # The unit suites, which nothing in this repository ran until now. Five
+      # files, 44 cases, four of them asserting the script engine REJECTS what
+      # it should reject -- so before this step a change that broke a reject
+      # path reached the live site with every gate green. Placed before the
+      # build so a unit failure fails the run in seconds rather than after a
+      # browser download. `vitest run` exits 1 when it matches no files, so
+      # this step cannot pass by silently running nothing.
+      - name: Unit tests (vitest)
+        run: npm test
       - run: npm run build
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
