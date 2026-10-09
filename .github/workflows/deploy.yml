@@ -45,6 +45,8 @@ jobs:
       - run: npm run build
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
+      - name: Browser smoke and teaching scenario checks
+        run: npm run test:browser
       - name: Accessibility gate (axe-core, WCAG A/AA)
         run: npm run test:a11y
       - uses: actions/upload-pages-artifact@v5

@@ -44,6 +44,8 @@ npm run dev
 
 No environment variables, no API keys, no servers — everything runs client-side. The build bundles `@noble/secp256k1` and `@noble/hashes` into a single static JS file deployed straight to GitHub Pages, with no remote services and no telemetry. Additional scripts: `npm run build` (tsc + production build to `dist/`), `npm run preview` (serve the built `dist/` locally), and `npm test` (Vitest: engine known-answers, a jsdom run that drives the real stepper, and an axe-core WCAG 2 A/AA gate).
 
+For browser verification, run `npx playwright install chromium`, then `npm run test:browser` and `npm run test:a11y`. The smoke suite uses installed Windows Edge when available and the installed Playwright Chromium on other systems. `CRYPTO_LAB_BROWSER_PATH` can select an existing browser executable for verification; it is not required by the application. Both browser suites gate the Pages deployment.
+
 ## Related Demos
 
 - [crypto-lab-bitcoin-wallet](https://systemslibrarian.github.io/crypto-lab-bitcoin-wallet/) — keys → P2PKH/P2WPKH addresses, BIP-39 mnemonics, and BIP-32 HD derivation: where the keys this script checks come from.
