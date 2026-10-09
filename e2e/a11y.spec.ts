@@ -185,6 +185,7 @@ async function expandAll(page: Page): Promise<void> {
 async function open(page: Page, theme: 'dark' | 'light'): Promise<void> {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('.');
+  await expect(page.locator('.cl-brand')).toHaveAccessibleName(/CL CRYPTO LAB/);
   await assertReducedMotion(page);
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   // #app ships empty; wait for the real first paint before believing anything.

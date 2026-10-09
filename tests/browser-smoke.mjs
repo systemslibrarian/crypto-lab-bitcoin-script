@@ -1,5 +1,6 @@
-// tests/browser-smoke.mjs — real-browser verification using the system Edge
-// (no Chromium download). Run with: npm run test:browser  (it builds first).
+// tests/browser-smoke.mjs — real-browser verification using installed Windows
+// Edge when available, or the Playwright Chromium installed for the WCAG gate.
+// Run with: npm run test:browser (it builds first).
 //
 // Asserts, against the actual rendered page:
 //   * loads with no console/page errors
@@ -13,12 +14,16 @@
 
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
+import { existsSync } from 'node:fs';
+import { chromium } from '@playwright/test';
 import puppeteer from 'puppeteer-core';
 
 const require = createRequire(import.meta.url);
 const AXE_PATH = require.resolve('axe-core/axe.min.js');
 
 const EDGE = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
+const BROWSER = process.env.CRYPTO_LAB_BROWSER_PATH ||
+  (process.platform === 'win32' && existsSync(EDGE) ? EDGE : chromium.executablePath());
 const PORT = 4401;
 const BASE = `http://localhost:${PORT}/crypto-lab-bitcoin-script/`;
 
@@ -51,7 +56,7 @@ async function main() {
   const preview = await startPreview();
   let browser;
   try {
-    browser = await puppeteer.launch({ executablePath: EDGE, headless: true, args: ['--no-sandbox', '--disable-gpu'] });
+    browser = await puppeteer.launch({ executablePath: BROWSER, headless: true, args: ['--no-sandbox', '--disable-gpu'] });
     const page = await browser.newPage();
     page.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(m.text()); });
     page.on('pageerror', (e) => consoleErrors.push('pageerror: ' + e.message));
