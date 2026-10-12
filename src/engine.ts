@@ -1,4 +1,4 @@
-// engine.ts — the real cryptography behind the demo, built on the audited
+// engine.ts — the real cryptography behind the demo, built on the
 // @noble libraries. Covers: secp256k1 keys, HASH160 (RIPEMD160∘SHA256), DER
 // signature encoding/decoding/inspection, a real legacy SIGHASH_ALL preimage
 // (exposed as labelled segments) over a concrete one-input/one-output
@@ -11,16 +11,17 @@
 // per session in memory and never persisted; do not guard real funds.
 
 import * as secp from '@noble/secp256k1';
-import { sha256 } from '@noble/hashes/sha2';
-import { ripemd160 } from '@noble/hashes/legacy';
-import { hmac } from '@noble/hashes/hmac';
+import { sha256 } from '@noble/hashes/sha2.js';
+import { ripemd160 } from '@noble/hashes/legacy.js';
+import { hmac } from '@noble/hashes/hmac.js';
 
-// @noble/secp256k1 v2 needs a synchronous HMAC-SHA256 wired up for RFC-6979
+// @noble/secp256k1 v3 needs a synchronous HMAC-SHA256 wired up for RFC-6979
 // deterministic ECDSA (otherwise only the async signer is available).
-secp.etc.hmacSha256Sync = (key: Uint8Array, ...msgs: Uint8Array[]): Uint8Array =>
-  hmac(sha256, key, secp.etc.concatBytes(...msgs));
+secp.hashes.hmacSha256 = (key: Uint8Array, msg: Uint8Array): Uint8Array =>
+  hmac(sha256, key, msg);
+secp.hashes.sha256 = sha256;
 
-const N = secp.CURVE.n;
+const N = secp.Point.CURVE().n;
 const HALF_N = N / 2n;
 
 // ---------------------------------------------------------------------------
@@ -139,7 +140,7 @@ export interface KeyPair {
 }
 
 export function makeKeyPair(priv?: Uint8Array): KeyPair {
-  const sk = priv ?? secp.utils.randomPrivateKey();
+  const sk = priv ?? secp.utils.randomSecretKey();
   const pub = secp.getPublicKey(sk, true);
   return { priv: sk, pub, pubKeyHash: hash160(pub) };
 }
@@ -154,7 +155,7 @@ export function parseCompressedPubKey(bytes: Uint8Array): Uint8Array {
 }
 
 // ---------------------------------------------------------------------------
-// DER encoding/decoding (BIP-66 shape). @noble v2 only exposes compact (r||s),
+// DER encoding/decoding (BIP-66 shape). The SDK exposes compact (r||s),
 // so the Bitcoin-flavoured DER wrapper is built here — and it is exactly the
 // part a student wants to see, not hide in a library.
 // ---------------------------------------------------------------------------
@@ -298,7 +299,11 @@ export function legacySighash(ctx: SpendContext): Uint8Array {
 /** ECDSA-sign a 32-byte sighash, low-S, and return the Bitcoin scriptSig push:
  *  DER(r,s) || hashType. */
 export function signSighash(sighash: Uint8Array, priv: Uint8Array): Uint8Array {
-  const sig = secp.sign(sighash, priv); // RFC-6979 deterministic, low-S by default
+  // legacySighash already double-hashes the preimage; v3's default prehash
+  // would hash it a third time. Keep the compact SDK form inside our DER wrapper.
+  const sig = secp.Signature.fromBytes(
+    secp.sign(sighash, priv, { prehash: false, format: 'compact' }), 'compact',
+  ); // RFC-6979 deterministic, low-S by default
   const der = rsToDER(bigintTo32be(sig.r), bigintTo32be(sig.s));
   return concat(der, Uint8Array.of(SIGHASH_ALL));
 }
@@ -306,7 +311,9 @@ export function signSighash(sighash: Uint8Array, priv: Uint8Array): Uint8Array {
 /** Like signSighash but flips s to n−s, producing a mathematically valid but
  *  non-standard HIGH-S signature (BIP-146 policy rejects it). For edge cases. */
 export function signSighashHighS(sighash: Uint8Array, priv: Uint8Array): Uint8Array {
-  const sig = secp.sign(sighash, priv);
+  const sig = secp.Signature.fromBytes(
+    secp.sign(sighash, priv, { prehash: false, format: 'compact' }), 'compact',
+  );
   const highS = N - sig.s;
   const der = rsToDER(bigintTo32be(sig.r), bigintTo32be(highS));
   return concat(der, Uint8Array.of(SIGHASH_ALL));
@@ -327,7 +334,9 @@ export function checkSig(
     const der = sigWithType.slice(0, sigWithType.length - 1); // drop hash-type byte
     const { r, s } = derToRS(der);
     const sig = new secp.Signature(r, s); // throws if r or s ∉ [1, n)
-    return secp.verify(sig.toCompactRawBytes(), sighash, pub, { lowS });
+    return secp.verify(sig.toBytes('compact'), sighash, pub, {
+      lowS, prehash: false, format: 'compact',
+    });
   } catch {
     return false;
   }

@@ -46,7 +46,10 @@ describe('engine: real Bitcoin known-answers', () => {
 describe('DER encoding round-trips', () => {
   it('encodes and decodes an (r, s) pair', () => {
     const kp = makeKeyPair();
-    const sig = secp.sign(new Uint8Array(32).fill(7), kp.priv);
+    const sig = secp.Signature.fromBytes(
+      secp.sign(new Uint8Array(32).fill(7), kp.priv, { prehash: false, format: 'compact' }),
+      'compact',
+    );
     const r = hexToBytes(sig.r.toString(16).padStart(64, '0'));
     const s = hexToBytes(sig.s.toString(16).padStart(64, '0'));
     const der = rsToDER(r, s);
