@@ -2,7 +2,9 @@
 
 ## What It Is
 
-An interactive model of **Bitcoin Script** — the tiny, stack-based language that defines who is allowed to spend each bitcoin — using **real cryptography in the browser**. The page composes the audited [`@noble/secp256k1`](https://github.com/paulmillr/noble-secp256k1) and [`@noble/hashes`](https://github.com/paulmillr/noble-hashes) libraries to build a genuine **Pay-to-Public-Key-Hash (P2PKH)** spend end to end: a secp256k1 key pair, a HASH160 (SHA-256 → RIPEMD-160) commitment in the locking script, a real **legacy SIGHASH_ALL** preimage over a concrete one-input/one-output transaction, an **ECDSA** signature (low-S, DER-encoded) in the unlocking script, and a hand-rolled stack interpreter that executes `OP_DUP · OP_HASH160 · OP_EQUALVERIFY · OP_CHECKSIG` one step at a time. Nothing is faked: the signature math, the hashes, and the sighash are all the real thing, validated at boot against the textbook privkey = 1 key whose HASH160 is `751e76e8199196d454941c45d1b3a323f1433bd6` (address `1BgGZ9tcN4rm9KBzDn7KprQz87SZ26SAMH`). Keys are generated per session in memory and never persisted — this is **for education only**.
+An interactive model of **Bitcoin Script** — the tiny, stack-based language that defines who is allowed to spend each bitcoin — using **real cryptography in the browser**. The page composes [`@noble/secp256k1`](https://github.com/paulmillr/noble-secp256k1) and [`@noble/hashes`](https://github.com/paulmillr/noble-hashes) libraries to build a genuine **Pay-to-Public-Key-Hash (P2PKH)** spend end to end: a secp256k1 key pair, a HASH160 (SHA-256 → RIPEMD-160) commitment in the locking script, a real **legacy SIGHASH_ALL** preimage over a concrete one-input/one-output transaction, an **ECDSA** signature (low-S, DER-encoded) in the unlocking script, and a hand-rolled stack interpreter that executes `OP_DUP · OP_HASH160 · OP_EQUALVERIFY · OP_CHECKSIG` one step at a time. Nothing is faked: the signature math, the hashes, and the sighash are all the real thing, validated at boot against the textbook privkey = 1 key whose HASH160 is `751e76e8199196d454941c45d1b3a323f1433bd6` (address `1BgGZ9tcN4rm9KBzDn7KprQz87SZ26SAMH`). Keys are generated per session in memory and never persisted — this is **for education only**.
+
+The lockfile selects `@noble/secp256k1` 3.2.0 and `@noble/hashes` 2.4.0. The secp256k1 publisher [states that the current rewrite has not been independently audited](https://github.com/paulmillr/noble-secp256k1/blob/04c95fb63085e862a14616ce5b86549fea56191c/README.md#security); its v1 audit does not establish an audit of this locked version. Signing and verification use `prehash: false` because the lab already computes the Bitcoin double-SHA256 digest. Compact 64-byte SDK signatures pass through the existing Bitcoin DER wrapper and SIGHASH_ALL byte. Regression tests independently verify those signatures with Node/OpenSSL and reject the extra-hash case.
 
 ## When to Use It
 
@@ -34,6 +36,8 @@ A coin is locked to an owner's `pubKeyHash`. Pick one of four spend scenarios �
 - Taproot (P2TR) replaces this pattern for new outputs with Schnorr signatures and key aggregation, improving privacy and efficiency for the common cooperative case.
 
 ## How to Run Locally
+
+Use Node.js 24, matching the application CI runtime.
 
 ```bash
 git clone https://github.com/systemslibrarian/crypto-lab-bitcoin-script
