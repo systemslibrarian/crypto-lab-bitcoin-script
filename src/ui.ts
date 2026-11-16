@@ -114,10 +114,8 @@ function note(text: string): HTMLElement {
 }
 
 function hero(): HTMLElement {
-  // Theme toggle stays in the DOM (main.ts wires #theme-toggle); the shared
-  // topbar hides it and drives theming via #cl-theme-toggle.
-  const toggle = h('button', { class: 'theme-toggle', id: 'theme-toggle', type: 'button', 'aria-label': 'Toggle color theme', title: 'Toggle theme' });
-  toggle.textContent = '🌙';
+  // No theme control: index.html pins dark before first paint and that is the
+  // only theme, so the hero ships no toggle and owns no theme state.
   const d = h('details', { class: 'hero-howto' });
   d.append(
     h('summary', {}, 'How to read this lab'),
@@ -133,7 +131,7 @@ function hero(): HTMLElement {
     h('span', { class: 'cl-hero-why-label' }, 'WHY IT MATTERS'),
     h('p', { class: 'cl-hero-why-text' }, 'Every bitcoin is guarded by this tiny program — it is the actual mechanism that releases coins. Seeing how the wrong key, a forged signature, or a tampered transaction gets rejected is what connects ECDSA math to real on-chain security.'),
   );
-  return h('header', { class: 'cl-hero' }, toggle, main, why);
+  return h('header', { class: 'cl-hero' }, main, why);
 }
 
 function whatIsSection(): HTMLElement {

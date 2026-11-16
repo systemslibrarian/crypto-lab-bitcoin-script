@@ -3,33 +3,6 @@ import './extra.css';
 import { mountApp } from './ui';
 import { makeKeyPair, signSighash, checkSig, bytesToHex } from './engine';
 
-const THEME_KEY = 'theme';
-
-function applyTheme(theme: 'dark' | 'light'): void {
-  document.documentElement.setAttribute('data-theme', theme);
-  try {
-    localStorage.setItem(THEME_KEY, theme);
-  } catch {
-    /* storage may be disabled — ignore */
-  }
-  const toggle = document.getElementById('theme-toggle');
-  if (toggle) {
-    toggle.textContent = theme === 'dark' ? '🌙' : '☀️';
-    toggle.setAttribute('aria-label', theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
-  }
-}
-
-function currentTheme(): 'dark' | 'light' {
-  return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
-}
-
-function wireThemeToggle(): void {
-  applyTheme(currentTheme());
-  const toggle = document.getElementById('theme-toggle');
-  if (!toggle) return;
-  toggle.addEventListener('click', () => applyTheme(currentTheme() === 'dark' ? 'light' : 'dark'));
-}
-
 function selfTest(): void {
   // eslint-disable-next-line no-console
   console.group('crypto-lab-bitcoin-script · self-test');
@@ -61,7 +34,6 @@ function boot(): void {
   const root = document.getElementById('app');
   if (!(root instanceof HTMLElement)) throw new Error('#app root not found');
   mountApp(root);
-  wireThemeToggle();
   selfTest();
 }
 
