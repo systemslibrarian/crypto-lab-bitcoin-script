@@ -34,7 +34,7 @@ jobs:
           cache: npm
       - run: npm ci
       # The unit suites, which nothing in this repository ran until now. Five
-      # files, 44 cases, four of them asserting the script engine REJECTS what
+      # files, 51 cases, including reject-path and Script-truthiness assertions
       # it should reject -- so before this step a change that broke a reject
       # path reached the live site with every gate green. Placed before the
       # build so a unit failure fails the run in seconds rather than after a

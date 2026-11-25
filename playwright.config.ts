@@ -15,6 +15,7 @@ import { defineConfig, devices } from '@playwright/test';
 // cannot drift apart.
 const PORT = 4676;
 const BASE = '/crypto-lab-bitcoin-script/';
+const EXECUTABLE_PATH = process.env.CRYPTO_LAB_BROWSER_PATH;
 
 export default defineConfig({
   testDir: './e2e',
@@ -27,7 +28,13 @@ export default defineConfig({
     colorScheme: 'dark',
   },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        ...(EXECUTABLE_PATH ? { launchOptions: { executablePath: EXECUTABLE_PATH } } : {}),
+      },
+    },
   ],
   webServer: {
     // Build first: `vite preview` only serves whatever is already in `dist/`.

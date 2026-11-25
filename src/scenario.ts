@@ -236,7 +236,7 @@ export function buildScenarios(
     twist:
       "The owner signs correctly, but the signature's s value is the high variant (n − s) — mathematically valid, but non-standard.",
     lesson:
-      'ECDSA has two valid s values for every signature (s and n − s). Bitcoin policy (BIP-146) requires the low one to stop signature malleability, so OP_CHECKSIG rejects the high-S form even though the raw ECDSA math checks out. The Signature decoder flags low-S = false.',
+      "ECDSA has two valid s values for every signature (s and n − s). Bitcoin Core's standard relay policy (SCRIPT_VERIFY_LOW_S, a BIP-62 rule) requires the low one to limit signature malleability, so this teaching interpreter rejects the high-S form even though the raw ECDSA math checks out. BIP-146 proposed a broader consensus rule but was closed without deployment. The Signature decoder flags low-S = false.",
     scriptSig: p2pkhScriptSig(highSSig, owner.pub),
     execSighash: sighash,
     expectSuccess: false,

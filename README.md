@@ -27,6 +27,7 @@ A coin is locked to an owner's `pubKeyHash`. Pick one of four spend scenarios â€
 - **Signatures only commit to what the sighash covers:** the "tampered transaction" scenario shows that changing a signed field breaks the signature â€” but the flip side is that *un*signed fields (e.g. legacy malleability of the scriptSig) historically caused real bugs.
 - **Historical foot-guns are real:** `OP_CHECKMULTISIG`'s off-by-one stack pop and an early value-overflow bug are reminders that even a deliberately small language is not bug-free.
 - **This is not consensus-complete:** a real node enforces dozens of additional rules (script size limits, standardness, low-S/strict-DER policy, sequence/locktime semantics) that this teaching model does not.
+- **Low-S is a policy boundary here:** the interpreter enables Bitcoin Core's `SCRIPT_VERIFY_LOW_S` standard-relay rule. A high-S legacy P2PKH signature is mathematically valid and may remain consensus-valid, but is non-standard and normally will not be relayed. The closed BIP-146 proposal is not treated as a deployed consensus rule.
 
 ## Real-World Usage
 

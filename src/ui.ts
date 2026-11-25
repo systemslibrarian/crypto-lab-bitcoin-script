@@ -425,7 +425,7 @@ function interactive(): HTMLElement {
         kv('r', shortHex(info.rHex, 12, 10), '32-byte ECDSA component'),
         kv('s', shortHex(info.sHex, 12, 10), '32-byte ECDSA component'),
         h('div', { class: 'insp-flags' },
-          statusChip(info.lowS, 'low-S (BIP-146)', 'high-S (non-standard)'),
+          statusChip(info.lowS, 'low-S (relay policy)', 'high-S (non-standard)'),
           statusChip(info.hashTypeSupported, info.hashTypeName, info.hashTypeName),
         ),
         h('p', { class: 'verify-line' }, statusChip(verifyPolicy, 'verifies under policy', 'rejected by policy'),

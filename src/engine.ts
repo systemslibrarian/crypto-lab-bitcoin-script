@@ -6,8 +6,8 @@
 // verification predicate.
 //
 // Everything here is real Bitcoin math. The signature scheme is ECDSA over
-// secp256k1 with low-S enforced (BIP-146) and DER encoding (BIP-66). The sighash
-// is the genuine legacy algorithm. This is for EDUCATION — keys are generated
+// secp256k1 with Bitcoin Core's low-S standard-relay policy enabled and DER
+// encoding (BIP-66). The sighash is the genuine legacy algorithm. This is for EDUCATION — keys are generated
 // per session in memory and never persisted; do not guard real funds.
 
 import * as secp from '@noble/secp256k1';
@@ -309,7 +309,8 @@ export function signSighash(sighash: Uint8Array, priv: Uint8Array): Uint8Array {
 }
 
 /** Like signSighash but flips s to n−s, producing a mathematically valid but
- *  non-standard HIGH-S signature (BIP-146 policy rejects it). For edge cases. */
+ *  non-standard HIGH-S signature (Bitcoin Core's standard relay policy rejects
+ *  it). For edge cases. */
 export function signSighashHighS(sighash: Uint8Array, priv: Uint8Array): Uint8Array {
   const sig = secp.Signature.fromBytes(
     secp.sign(sighash, priv, { prehash: false, format: 'compact' }), 'compact',
@@ -320,9 +321,10 @@ export function signSighashHighS(sighash: Uint8Array, priv: Uint8Array): Uint8Ar
 }
 
 /** OP_CHECKSIG's predicate: does `sigWithType` (DER||hashType) verify `pub`
- *  against `sighash`? Mirrors consensus: any malformed/out-of-range/forged
- *  signature simply yields false rather than throwing. `lowS` defaults to true
- *  (BIP-146 policy); pass false to see whether a high-S sig is otherwise valid. */
+ *  against `sighash`? Malformed/out-of-range/forged signatures fail closed
+ *  rather than throwing. `lowS` defaults to true to model Bitcoin Core's
+ *  standard relay policy; pass false to see whether a high-S legacy signature
+ *  is otherwise mathematically and consensus valid. */
 export function checkSig(
   sigWithType: Uint8Array,
   pub: Uint8Array,

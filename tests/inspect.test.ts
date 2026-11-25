@@ -93,7 +93,7 @@ describe('signature inspection', () => {
     const info = inspectSignature(sig);
     expect(info.ok).toBe(true);
     expect(info.lowS).toBe(false);
-    expect(checkSig(sig, kp.pub, sighash)).toBe(false); // BIP-146 policy (default lowS)
+    expect(checkSig(sig, kp.pub, sighash)).toBe(false); // standard relay policy (default lowS)
     expect(checkSig(sig, kp.pub, sighash, false)).toBe(true); // mathematically valid
   });
 

@@ -111,6 +111,24 @@ describe('P2PK executes end to end', () => {
   });
 });
 
+describe('Bitcoin Script truthiness', () => {
+  const runPush = (bytes: Uint8Array) =>
+    execute([{ kind: 'push' as const, bytes, label: 'test value' }], [], {
+      sighash: new Uint8Array(32),
+    });
+
+  it('treats empty, zero, and negative zero as false', () => {
+    expect(runPush(new Uint8Array()).success).toBe(false);
+    expect(runPush(Uint8Array.of(0x00)).success).toBe(false);
+    expect(runPush(Uint8Array.of(0x80)).success).toBe(false);
+    expect(runPush(Uint8Array.of(0x00, 0x80)).success).toBe(false);
+  });
+
+  it('does not confuse a non-final sign bit with negative zero', () => {
+    expect(runPush(Uint8Array.of(0x80, 0x00)).success).toBe(true);
+  });
+});
+
 describe('the four P2PKH scenarios behave as the demo claims', () => {
   const owner = makeKeyPair();
   const attacker = makeKeyPair();

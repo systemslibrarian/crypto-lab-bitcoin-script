@@ -727,9 +727,9 @@ test.describe('signature decoder', () => {
     expect(rows['s'].startsWith(hex64(s).slice(0, 12))).toBe(true);
     expect(rows['s'].endsWith(hex64(s).slice(-10))).toBe(true);
 
-    // low-S (BIP-146), checked against the curve order rather than the flag.
+    // Low-S standard relay policy, checked against the curve order rather than the flag.
     expect(s <= CURVE_N / 2n).toBe(true);
-    await expect(insp.locator('.insp-flags .scenario-status').first()).toHaveText('✓ low-S (BIP-146)');
+    await expect(insp.locator('.insp-flags .scenario-status').first()).toHaveText('✓ low-S (relay policy)');
     await expect(insp.locator('.insp-flags .scenario-status').nth(1)).toHaveText('✓ SIGHASH_ALL');
     await expect(insp.locator('.verify-line .scenario-status')).toHaveText('✓ verifies under policy');
     await expect(insp.locator('.verify-aside')).toHaveCount(0);

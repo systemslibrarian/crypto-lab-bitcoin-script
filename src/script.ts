@@ -122,9 +122,16 @@ export function serializeScript(els: ScriptElement[]): Uint8Array {
 
 // ---- the interpreter ------------------------------------------------------
 function isTruthy(item: StackItem | undefined): boolean {
-  // Bitcoin: empty array and all-zero bytes are false; anything else is true.
+  // Bitcoin Script numbers use signed-magnitude encoding. Empty/all-zero byte
+  // arrays are false, and so is "negative zero": zero bytes followed by 0x80.
+  // Bitcoin Core's CastToBool applies this rule even when the bytes are not a
+  // minimally encoded number.
   if (!item || item.hex === '') return false;
-  return /[1-9a-f]/.test(item.hex);
+  const bytes = item.hex.match(/../g)?.map((byte) => Number.parseInt(byte, 16)) ?? [];
+  for (let i = 0; i < bytes.length; i++) {
+    if (bytes[i] !== 0) return !(i === bytes.length - 1 && bytes[i] === 0x80);
+  }
+  return false;
 }
 
 /**
